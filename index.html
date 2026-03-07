@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大富豪 (ブラウザ版)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- CPU情報エリア -->
+        <header id="cpu-area">
+            <div class="cpu-stat" id="cpu-1">
+                <span class="cpu-name">CPU 1</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-1">11枚</div>
+            </div>
+            <div class="cpu-stat" id="cpu-2">
+                <span class="cpu-name">CPU 2</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-2">11枚</div>
+            </div>
+            <div class="cpu-stat" id="cpu-3">
+                <span class="cpu-name">CPU 3</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-3">10枚</div>
+            </div>
+            <div class="cpu-stat" id="cpu-4">
+                <span class="cpu-name">CPU 4</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-4">10枚</div>
+            </div>
+        </header>
+
+        <!-- ゲーム進行情報（ターン、革命状態など） -->
+        <div id="game-info">
+            <h2 id="turn-indicator">ゲーム開始待機中...</h2>
+            <div id="rule-status">
+                <span id="revolution-badge" class="badge hidden">革命発生中！</span>
+            </div>
+        </div>
+
+        <!-- 場札エリア -->
+        <main id="table-area">
+            <div id="table-cards" class="card-container">
+                <!-- 場に出されたカードがここに表示される -->
+            </div>
+            <div id="pass-overlay">パス！</div>
+            <div id="foul-overlay">反則上がり！</div>
+        </main>
+
+        <!-- プレイヤー情報＆手札エリア -->
+        <footer id="player-area">
+            <div id="player-status">
+                <span class="player-name">あなた</span>
+                <span class="player-rank" id="player-rank"></span>
+                <span class="player-pass" id="player-pass-status"></span>
+            </div>
+
+            <div id="player-hand" class="hand-container">
+                <!-- 手札がここに表示される -->
+            </div>
+
+            <!-- アクションボタン -->
+            <div id="action-controls">
+                <button id="btn-pass" class="action-btn secondary" disabled>パス</button>
+                <button id="btn-play" class="action-btn primary" disabled>出す</button>
+                <button id="btn-exchange" class="action-btn primary hidden" disabled>交換</button>
+            </div>
+        </footer>
+
+        <!-- モーダルダイアログ (結果表示など) -->
+        <div id="modal-overlay" class="hidden">
+            <div id="modal-content">
+                <h2 id="modal-title">結果</h2>
+                <div id="modal-body"></div>
+                <button id="btn-next-game" class="action-btn primary hidden">次へ</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
