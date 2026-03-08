@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大富豪 (ブラウザ版)</title>
+    <style>
+        :root {
+            --bg-color: #1A3C34;
+            /* 深みのあるカジノグリーン */
+            --card-bg: #FFFFFF;
+            --card-text: #333333;
+            --spade-color: #212121;
+            --heart-color: #E53935;
+            --diamond-color: #E53935;
+            --club-color: #212121;
+            --joker-color: #8E24AA;
+            --primary-btn: #1E88E5;
+            --secondary-btn: #757575;
+            --text-color: #FFFFFF;
+            /* 可変サイズカード設定: ウィンドウ幅に応じて変化 */
+            --card-width: clamp(55px, 9vw, 110px);
+            --active-color: #FFEB3B;
+            /* ターンプレイヤー強調色 (イエロー) */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            /* dvhを使用してアドレスバーの影響を回避 */
+            min-height: 100dvh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            padding: 10px;
+            overflow: hidden;
+            /* コンテナを絶対にはみ出させない */
+        }
+
+        /* Header: CPU Area */
+        #cpu-area {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            margin-bottom: 5px;
+        }
+
+        .cpu-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            min-width: 70px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .cpu-stat.active-turn {
+            background: rgba(255, 235, 59, 0.15);
+            border-color: var(--active-color);
+            box-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
+            transform: scale(1.05);
+        }
+
+        .cpu-name {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .cpu-rank {
+            font-size: 0.75em;
+            color: #FFD700;
+            height: 1.2em;
+            font-weight: bold;
+        }
+
+        .cpu-cards {
+            margin-top: 4px;
+            font-weight: 800;
+            font-size: 1.2em;
+        }
+
+        .passed-cpu {
+            opacity: 0.4;
+        }
+
+        /* Info Area */
+        #game-info {
+            text-align: center;
+            padding: 5px;
+        }
+
+        #turn-indicator {
+            font-size: 1.1em;
+            min-height: 1.5em;
+            color: #FFEB3B;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        #revolution-badge {
+            background-color: #D32F2F;
+            box-shadow: 0 0 10px #f44336;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Main: Table Area */
+        #table-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .card-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        /* パス演出用オーバーレイ */
+        #pass-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            pointer-events: none;
+            z-index: 500;
+            opacity: 0;
+            transition: opacity 0.2s;
+            border: 2px solid #FFFFFF;
+        }
+
+        #pass-overlay.show {
+            opacity: 1;
+        }
+
+        /* 反則上がり用オーバーレイ */
+        #foul-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(211, 47, 47, 0.9);
+            /* 赤系 */
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.8rem;
+            font-weight: 900;
+            pointer-events: none;
+            z-index: 500;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 3px solid #FFFFFF;
+            box-shadow: 0 0 20px rgba(211, 47, 47, 0.8);
+        }
+
+        #foul-overlay.show {
+            opacity: 1;
+        }
+
+        /* Cards */
+        .card {
+            width: var(--card-width);
+            aspect-ratio: 2 / 3;
+            /* 高さを幅に合わせる */
+            background-color: var(--card-bg);
+            border: 1px solid #ddd;
+            border-radius: clamp(4px, 1vw, 8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(0.9rem, 1.5vw, 1.5rem);
+            font-weight: bold;
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+            position: relative;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .card.spade,
+        .card.club {
+            color: var(--spade-color);
+        }
+
+        .card.heart,
+        .card.diamond {
+            color: var(--heart-color);
+        }
+
+        .card.joker {
+            color: var(--joker-color);
+            font-size: clamp(0.7rem, 1.2vw, 1.1rem);
+        }
+
+        .card::before,
+        .card::after {
+            content: attr(data-number) "\A" attr(data-suit);
+            white-space: pre-wrap;
+            position: absolute;
+            font-size: 0.6em;
+            line-height: 1.1;
+            text-align: center;
+        }
+
+        .card::before {
+            top: 4px;
+            left: 4px;
+        }
+
+        .card::after {
+            bottom: 4px;
+            right: 4px;
+            transform: rotate(180deg);
+        }
+
+        .card.joker::before,
+        .card.joker::after {
+            content: "JOKER";
+            font-size: 0.35em;
+        }
+
+        /* 中央の大きなマーク */
+        .card-mark-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            opacity: 0.15;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .card.joker .card-mark-center {
+            font-size: 1.5em;
+        }
+
+        /* Player Area */
+        #player-area {
+            /* background-color を削除して透過させ、「帯」を解消 */
+            border-radius: 12px 12px 0 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            /* gapを少し詰め、全体をスリム化 */
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            /* セーフエリア考慮 */
+        }
+
+        #player-area.active-turn {
+            background: rgba(255, 235, 59, 0.05);
+            /* より薄い背景にする */
+            border-color: var(--active-color);
+        }
+
+        #player-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 10px;
+            /* パディングを減らす */
+            font-size: 0.85em;
+            /* 文字を少し小さくして目立たせない */
+            color: rgba(255, 255, 255, 0.7);
+            /* 少し透過させて背後のカードを透けやすくする */
+        }
+
+        .player-name {
+            font-weight: bold;
+        }
+
+        .player-rank {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        #player-pass-status {
+            color: #FF5252;
+            font-weight: bold;
+        }
+
+        /* 手札表示: 重なりを動的に調整するため、スタイルはJSからも操作 */
+        .hand-container {
+            display: flex;
+            padding: 40px 10px 10px 10px;
+            /* 上部を広げて選択時の見切れを防止 */
+            min-height: 120px;
+            /* 少し縮小してスペース確保 */
+            max-height: 25dvh;
+            /* 画面の25%程度に制限してボタン領域を確保 */
+            justify-content: center;
+            align-items: flex-end;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        #player-hand .card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        #player-hand .card:hover {
+            transform: translateY(-20px);
+        }
+
+        #player-hand .card.selected {
+            transform: translateY(-30px);
+            border: 2px solid var(--active-color);
+            box-shadow: 0 0 15px var(--active-color);
+        }
+
+        /* Action Buttons */
+        #action-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding-bottom: 5px;
+        }
+
+        .action-btn {
+            padding: min(10px, 2vh) min(30px, 5vw);
+            font-size: clamp(0.9em, 1.2vw, 1.1em);
+            font-weight: bold;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.1s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .primary {
+            background: linear-gradient(135deg, #2196F3, #1565C0);
+        }
+
+        .secondary {
+            background: linear-gradient(135deg, #9E9E9E, #616161);
+        }
+
+        /* Modal */
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        #modal-content {
+            background: #263238;
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            border: 2px solid #546E7A;
+        }
+
+        /* レスポンシブ修正 (スマートフォン向け) */
+        @media (max-width: 600px) {
+            .hand-container {
+                padding: 5px 5px;
+                min-height: calc(27vw + 30px);
+            }
+
+            .cpu-stat {
+                min-width: 60px;
+                padding: 5px;
+                font-size: 0.75em;
+            }
+
+            .action-btn {
+                flex: 1;
+            }
+        }
+
+        /* デバッグモード用スタイル */
+        #debug-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 30, 0, 0.95);
+            z-index: 3000;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            color: white;
+        }
+
+        .debug-player-row {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .debug-player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #FFEB3B;
+        }
+
+        .debug-hand {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-height: 80px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            border: 2px dashed transparent;
+            transition: all 0.2s;
+        }
+
+        .debug-hand.drag-over {
+            border-color: #FFEB3B;
+            background: rgba(255, 235, 59, 0.1);
+        }
+
+        .debug-hand .card {
+            cursor: grab;
+            width: clamp(40px, 7vw, 65px);
+            /* 通常より小さめ */
+            margin: 0;
+            /* マウスホバー等での重なりを防止 */
+            transform: none !important;
+            /* デバッグ画面ではアニメーション無効 */
+        }
+
+        .debug-hand .card:active {
+            cursor: grabbing;
+        }
+
+        /* 削除ボタン */
+        .card-remove-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 18px;
+            height: 18px;
+            background: #f44336;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+            border: 1px solid white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-remove-btn:hover {
+            background: #d32f2f;
+            transform: scale(1.1);
+        }
+
+        .debug-add-btn {
+            padding: 2px 8px;
+            font-size: 0.8em;
+            background: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .debug-add-btn:hover {
+            background: #388E3C;
+        }
+
+        /* カードセレクター モーダル */
+        #card-selector-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 4000;
+        }
+
+        #card-selector-content {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #34495e;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            color: white;
+        }
+
+        .selector-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .selector-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            aspect-ratio: 1;
+        }
+
+        .selector-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            border-color: #FFEB3B;
+        }
+
+        .selector-item.suit-spade,
+        .selector-item.suit-club {
+            color: white;
+        }
+
+        .selector-item.suit-heart,
+        .selector-item.suit-diamond {
+            color: #ff5252;
+        }
+
+        .selector-item.suit-joker {
+            color: #8e24aa;
+        }
+
+        .selector-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- CPU情報エリア -->
+        <header id="cpu-area">
+            <div class="cpu-stat" id="cpu-1">
+                <span class="cpu-name">CPU 1</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-1">11枚</div>
+            </div>
+            <div class="cpu-stat" id="cpu-2">
+                <span class="cpu-name">CPU 2</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-2">11枚</div>
+            </div>
+            <div class="cpu-stat" id="cpu-3">
+                <span class="cpu-name">CPU 3</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-3">10枚</div>
+            </div>
+            <div class="cpu-stat" id="cpu-4">
+                <span class="cpu-name">CPU 4</span>
+                <span class="cpu-rank"></span>
+                <div class="cpu-cards" id="cpu-cards-4">10枚</div>
+            </div>
+        </header>
+
+        <!-- ゲーム進行情報（ターン、革命状態など） -->
+        <div id="game-info">
+            <h2 id="turn-indicator">ゲーム開始待機中...</h2>
+            <div id="rule-status">
+                <span id="revolution-badge" class="badge hidden">革命発生中！</span>
+            </div>
+        </div>
+
+        <!-- 場札エリア -->
+        <main id="table-area">
+            <div id="table-cards" class="card-container">
+                <!-- 場に出されたカードがここに表示される -->
+            </div>
+            <div id="pass-overlay">パス！</div>
+            <div id="foul-overlay">反則上がり！</div>
+        </main>
+
+        <!-- プレイヤー情報＆手札エリア -->
+        <footer id="player-area">
+            <div id="player-status">
+                <span class="player-name">あなた</span>
+                <span class="player-rank" id="player-rank"></span>
+                <span class="player-pass" id="player-pass-status"></span>
+            </div>
+
+            <div id="player-hand" class="hand-container">
+                <!-- 手札がここに表示される -->
+            </div>
+
+            <!-- アクションボタン -->
+            <div id="action-controls">
+                <button id="btn-pass" class="action-btn secondary" disabled>パス</button>
+                <button id="btn-play" class="action-btn primary" disabled>出す</button>
+                <button id="btn-exchange" class="action-btn primary hidden" disabled>交換</button>
+            </div>
+        </footer>
+
+        <!-- モーダルダイアログ (結果表示など) -->
+        <div id="modal-overlay" class="hidden">
+            <div id="modal-content">
+                <h2 id="modal-title">結果</h2>
+                <div id="modal-body"></div>
+                <button id="btn-next-game" class="action-btn primary hidden">次へ</button>
+            </div>
+        </div>
+        <!-- デバッグレイヤー -->
+        <div id="debug-overlay" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2>デバッグモード (Lキーで開閉)</h2>
+                <button onclick="toggleDebugMode()" class="action-btn secondary"
+                    style="padding: 5px 15px; font-size: 0.9em;">閉じる</button>
+            </div>
+            <p style="margin-bottom: 10px; font-size: 0.9em; opacity: 0.8;">※カードをドラッグ＆ドロップして他のプレイヤーの手札に移動させることができます。</p>
+            <div id="debug-players"></div>
+        </div>
+
+        <!-- カードセレクターUI -->
+        <div id="card-selector-overlay" class="hidden">
+            <div id="card-selector-content">
+                <div id="selector-step-title" class="selector-title">スートを選択</div>
+                <div id="selector-grid" class="selector-grid"></div>
+                <button onclick="hideCardSelector()" class="action-btn secondary"
+                    style="margin-top: 20px; width: 100%;">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUITS = ['spade', 'heart', 'diamond', 'club'];
+        const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+
+        // ゲームのステート管理
+        let State = {
+            players: [],
+            table: [],            // 現在場に出ているカードの配列
+            lastPlayedCards: [],  // 直前に出されたカード（強さ比較用）
+            lastPlayerIdx: 0,     // 最後にカードを出したプレイヤーのインデックス
+            currentTurn: 0,
+            consecutivePasses: 0, // 連続パス数 (場を流す判定用)
+            isRevolution: false,
+            gameCount: 0,
+            nextNormalRank: 1,    // 次に通常上がりした人がなる順位 (1〜5)
+            nextFoulRank: 5,      // 次に反則上がりした人がなる順位 (5から減っていく)
+            isExchangePhase: false,
+            exchangeCount: 0,
+            exchangeSelectedIds: [],
+            isDebugMode: false,
+            playedCards: {
+                joker: 0,
+                two: 0,
+                ace: 0,
+                eight: 0,
+                spade3: 0
+            },
+            currentOverlap: 0
+        };
+
+        // 待機時間の定数 (ミリ秒)
+        const WAIT_TIME_CPU_THINK = 1000; // CPUの思考時間
+        const WAIT_TIME_NEXT_TURN = 800;  // カードを出した後の待機
+        const WAIT_TIME_CLEAR_TABLE = 1200; // 場を流す時の待機
+        const WAIT_TIME_PASS_DISPLAY = 1000; // パス表示の持続時間
+
+        // カードの強さを計算する関数 (Joker=16, 2=15, A=14, ..., 3=3)
+        function getCardPower(number, isRevolution) {
+            if (number === 0) return 16;
+            let power = number;
+            if (number === 1) power = 14;
+            else if (number === 2) power = 15;
+            if (isRevolution) power = 18 - power;
+            return power;
+        }
+
+        function getDisplayNumber(num) {
+            if (num === 0) return 'Joker';
+            const mapping = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
+            return mapping[num] || String(num);
+        }
+
+        function createDeck() {
+            let deck = [];
+            for (let suit of SUITS) {
+                for (let num of NUMBERS) {
+                    deck.push({ suit, number: num, id: `${suit}-${num}` });
+                }
+            }
+            for (let i = 0; i < 2; i++) {
+                deck.push({ suit: 'joker', number: 0, id: `joker-${i}` });
+            }
+            return deck;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function sortHand(hand) {
+            hand.sort((a, b) => {
+                const pA = getCardPower(a.number, false);
+                const pB = getCardPower(b.number, false);
+                if (pA !== pB) return pA - pB;
+                return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+            });
+        }
+
+        // === ルール判定 ===
+
+        function getHandType(cards) {
+            if (cards.length === 0) return null;
+            const nonJokers = cards.filter(c => c.number !== 0);
+            if (nonJokers.length === 0) return { type: 'normal', count: cards.length };
+            const firstNum = nonJokers[0].number;
+            if (nonJokers.every(c => c.number === firstNum)) return { type: 'normal', count: cards.length };
+            if (cards.length >= 3) {
+                if (cards.some(c => c.number === 0)) return null;
+                const suit = cards[0].suit;
+                if (cards.every(c => c.suit === suit)) {
+                    const powers = cards.map(c => getCardPower(c.number, false)).sort((a, b) => a - b);
+                    let isSeq = true;
+                    for (let i = 0; i < powers.length - 1; i++) { if (powers[i + 1] !== powers[i] + 1) { isSeq = false; break; } }
+                    if (isSeq) return { type: 'stairs', count: cards.length };
+                }
+            }
+            return null;
+        }
+
+        function canPlay(selectedCards) {
+            const handType = getHandType(selectedCards);
+            if (!handType) return false;
+            if (State.lastPlayedCards.length === 0) return true;
+
+            // スペ3返し: 場がジョーカー1枚の時にスペードの3単体を出せる
+            if (State.lastPlayedCards.length === 1 && State.lastPlayedCards[0].number === 0) {
+                if (selectedCards.length === 1 && selectedCards[0].suit === 'spade' && selectedCards[0].number === 3) return true;
+            }
+            const lastType = getHandType(State.lastPlayedCards);
+            if (handType.type !== lastType.type || handType.count !== lastType.count) return false;
+            const currentPower = getMaxPower(selectedCards, State.isRevolution);
+            const lastPower = getMaxPower(State.lastPlayedCards, State.isRevolution);
+            return currentPower > lastPower;
+        }
+
+        function getMaxPower(cards, isRev) {
+            let max = 0;
+            cards.forEach(c => { const p = getCardPower(c.number, isRev); if (p > max) max = p; });
+            return max;
+        }
+
+        // 反則上がりの判定
+        // 通常時: 2, Joker(0), 8, スペードの3 で上がると反則
+        // 革命時: 3, Joker(0), 8 で上がると反則
+        function isFoulWin(cards, isRevolution) {
+            for (let c of cards) {
+                if (c.number === 0) return true; // Joker
+                if (c.number === 8) return true; // 8切り上がり
+                if (isRevolution) {
+                    if (c.number === 3) return true;
+                } else {
+                    if (c.number === 2) return true;
+                    if (c.number === 3 && c.suit === 'spade') return true; // スペ3上がり
+                }
+            }
+            return false;
+        }
+
+        // === アクション ===
+
+        function playSelectedCards() {
+            const selectedIds = Array.from(document.querySelectorAll('#player-hand .card.selected')).map(el => el.dataset.id);
+            const selectedCards = State.players[0].hand.filter(c => selectedIds.includes(c.id));
+            if (canPlay(selectedCards)) playCards(0, selectedCards);
+            else alert('そのカードは出せません');
+        }
+
+        function playCards(playerIdx, cards) {
+            const p = State.players[playerIdx];
+            const cardIds = cards.map(c => c.id);
+
+            // スペ3返し判定 (場が上書きされる前にチェック)
+            let isSpade3Counter = false;
+            if (cards.length === 1 && cards[0].suit === 'spade' && cards[0].number === 3 &&
+                State.table.length === 1 && State.table[0].number === 0) {
+                isSpade3Counter = true;
+            }
+
+            p.hand = p.hand.filter(c => !cardIds.includes(c.id));
+
+            State.table = cards;
+            State.lastPlayedCards = [...cards];
+            State.lastPlayerIdx = playerIdx; // 出し手を記録
+            State.consecutivePasses = 0;     // 出し手が出たのでパス数をリセット
+
+            // カードカウントの更新
+            for (let c of cards) {
+                if (c.number === 0) State.playedCards.joker++;
+                else if (c.number === 2) State.playedCards.two++;
+                else if (c.number === 1) State.playedCards.ace++;
+                else if (c.number === 8) State.playedCards.eight++;
+                else if (c.number === 3 && c.suit === 'spade') State.playedCards.spade3++;
+            }
+
+            let resetImmediate = false;
+            if (cards.some(c => c.number === 8)) resetImmediate = true;
+            if (isSpade3Counter) resetImmediate = true;
+
+            const type = getHandType(cards).type;
+            if (cards.length >= 4 && (type === 'normal' || type === 'stairs')) State.isRevolution = !State.isRevolution;
+
+            render();
+
+            if (p.hand.length === 0 && !p.rank) {
+                if (isFoulWin(cards, State.isRevolution)) {
+                    // 反則上がり
+                    p.rank = State.nextFoulRank;
+                    State.nextFoulRank--;
+                    p.isFoul = true;
+                    p.rankName = getRankName(p.rank);
+                    showFoulEffect();
+                    // 反則上がりは場を流す（またはそのまま進行するルールのバリエーションがあるが、ここではリセットして次に回す）
+                    resetImmediate = true;
+                } else {
+                    // 通常上がり
+                    p.rank = State.nextNormalRank;
+                    State.nextNormalRank++;
+                    p.isFoul = false;
+                    p.rankName = getRankName(p.rank);
+                }
+            }
+
+            if (resetImmediate) {
+                setTimeout(() => {
+                    clearTable();
+                    // 8切りやスペ3返し後は、出した人が親となりそのまま手番を開始
+                    State.currentTurn = playerIdx;
+                    startTurn();
+                }, WAIT_TIME_CLEAR_TABLE);
+            } else {
+                setTimeout(nextTurn, WAIT_TIME_NEXT_TURN);
+            }
+        }
+
+        function handlePass() {
+            const p = State.players[0];
+            State.consecutivePasses++; // パス数を加算
+            showPassEffect();
+            render();
+            setTimeout(nextTurn, WAIT_TIME_PASS_DISPLAY);
+        }
+
+        function showPassEffect() {
+            const overlay = document.getElementById('pass-overlay');
+            overlay.classList.add('show');
+            setTimeout(() => {
+                overlay.classList.remove('show');
+            }, WAIT_TIME_PASS_DISPLAY);
+        }
+
+        // 反則上がり表示演出
+        function showFoulEffect() {
+            const overlay = document.getElementById('foul-overlay');
+            overlay.classList.add('show');
+            setTimeout(() => {
+                overlay.classList.remove('show');
+            }, WAIT_TIME_PASS_DISPLAY * 1.5);
+        }
+
+        function clearTable() {
+            State.table = [];
+            State.lastPlayedCards = [];
+            State.consecutivePasses = 0;
+            State.players.forEach(p => p.passed = false);
+            render();
+        }
+
+        function getRankName(rank) {
+            return ['大富豪', '富豪', '平民', '貧民', '大貧民'][rank - 1] || 'なし';
+        }
+
+        // === 進行管理 ===
+
+        function initGame() {
+            if (State.gameCount === 0) {
+                State.players = Array.from({ length: 5 }, (_, i) => ({
+                    id: i, name: i === 0 ? 'あなた' : `CPU ${i}`, isCPU: i !== 0,
+                    hand: [], rank: null, lastRank: null, rankName: '', passed: false, isFoul: false
+                }));
+            } else {
+                State.players.forEach(p => {
+                    p.lastRank = p.rank;
+                    p.hand = []; p.passed = false; p.rank = null; p.rankName = ''; p.isFoul = false;
+                });
+            }
+
+            State.table = [];
+            State.lastPlayedCards = [];
+            State.isRevolution = false;
+            State.nextNormalRank = 1;
+            State.nextFoulRank = 5;
+            State.playedCards = { joker: 0, two: 0, ace: 0, eight: 0, spade3: 0 };
+
+            // 2回目以降のゲームは大貧民（前回5位）から開始
+            if (State.gameCount > 0) {
+                const daichinmin = State.players.find(p => p.lastRank === 5);
+                if (daichinmin) {
+                    State.currentTurn = daichinmin.id;
+                } else {
+                    State.currentTurn = 0;
+                }
+            } else {
+                State.currentTurn = 0;
+            }
+
+            let deck = shuffle(createDeck());
+            for (let i = 0; deck.length > 0; i++) {
+                State.players[i % 5].hand.push(deck.pop());
+            }
+            State.players.forEach(p => sortHand(p.hand));
+
+            if (State.gameCount > 0) {
+                State.isExchangePhase = true;
+                document.getElementById('modal-overlay').classList.add('hidden');
+                startExchangePhase();
+            } else {
+                render();
+                // 初回ゲーム開始時にレイアウトを計算・固定
+                adjustHandLayout(true);
+                document.getElementById('modal-overlay').classList.add('hidden');
+                startTurn();
+            }
+        }
+
+        function startExchangePhase() {
+            const p = State.players[0];
+            State.exchangeSelectedIds = [];
+
+            if (p.lastRank === 1) { // 大富豪
+                State.exchangeCount = 2;
+                render(); // render先にしてUIを整える
+                document.getElementById('turn-indicator').innerText = '大富豪: 渡すカードを2枚選んで交換ボタンを押してください';
+            } else if (p.lastRank === 2) { // 富豪
+                State.exchangeCount = 1;
+                render();
+                document.getElementById('turn-indicator').innerText = '富豪: 渡すカードを1枚選んで交換ボタンを押してください';
+            } else if (p.lastRank === 3) { // 平民
+                State.exchangeCount = 0;
+                render();
+                document.getElementById('turn-indicator').innerText = '平民: カード交換なし';
+                setTimeout(executeExchange, 2000);
+            } else if (p.lastRank === 4) { // 貧民
+                State.exchangeCount = 1;
+                const strongCards = getStrongestCards(p.hand, 1);
+                State.exchangeSelectedIds = strongCards.map(c => c.id);
+                render();
+                document.getElementById('turn-indicator').innerText = '貧民: 最強カードを自動的に富豪に渡します...';
+                setTimeout(executeExchange, 2000);
+            } else if (p.lastRank === 5) { // 大貧民
+                State.exchangeCount = 2;
+                const strongCards = getStrongestCards(p.hand, 2);
+                State.exchangeSelectedIds = strongCards.map(c => c.id);
+                render();
+                document.getElementById('turn-indicator').innerText = '大貧民: 最強カード2枚を自動的に大富豪に渡します...';
+                setTimeout(executeExchange, 2000);
+            }
+        }
+
+        function getStrongestCards(hand, count) {
+            const sorted = [...hand].sort((a, b) => getCardPower(b.number, false) - getCardPower(a.number, false));
+            return sorted.slice(0, count);
+        }
+
+        function getWeakestCards(hand, count) {
+            const sorted = [...hand].sort((a, b) => getCardPower(a.number, false) - getCardPower(b.number, false));
+            return sorted.slice(0, count);
+        }
+
+        function executeExchange() {
+            const p1 = State.players.find(p => p.lastRank === 1);
+            const p2 = State.players.find(p => p.lastRank === 2);
+            const p4 = State.players.find(p => p.lastRank === 4);
+            const p5 = State.players.find(p => p.lastRank === 5);
+
+            let p1Give = [], p2Give = [], p4Give = [], p5Give = [];
+
+            if (p1 && p1.isCPU) p1Give = getWeakestCards(p1.hand, 2);
+            if (p2 && p2.isCPU) p2Give = getWeakestCards(p2.hand, 1);
+            if (p4) p4Give = getStrongestCards(p4.hand, 1);
+            if (p5) p5Give = getStrongestCards(p5.hand, 2);
+
+            const p = State.players[0];
+            if (p.lastRank === 1) {
+                const selectedIds = Array.from(document.querySelectorAll('#player-hand .card.selected')).map(el => el.dataset.id);
+                p1Give = p.hand.filter(c => selectedIds.includes(c.id));
+            } else if (p.lastRank === 2) {
+                const selectedIds = Array.from(document.querySelectorAll('#player-hand .card.selected')).map(el => el.dataset.id);
+                p2Give = p.hand.filter(c => selectedIds.includes(c.id));
+            }
+
+            if (p1 && p5) {
+                p1.hand = p1.hand.filter(c => !p1Give.includes(c));
+                p5.hand = p5.hand.filter(c => !p5Give.includes(c));
+                p1.hand.push(...p5Give);
+                p5.hand.push(...p1Give);
+            }
+            if (p2 && p4) {
+                p2.hand = p2.hand.filter(c => !p2Give.includes(c));
+                p4.hand = p4.hand.filter(c => !p4Give.includes(c));
+                p2.hand.push(...p4Give);
+                p4.hand.push(...p2Give);
+            }
+
+            State.players.forEach(player => sortHand(player.hand));
+            State.isExchangePhase = false;
+            State.exchangeSelectedIds = [];
+
+            document.getElementById('turn-indicator').innerText = 'カード交換完了。ゲームを開始します...';
+            render();
+            // 交換フェーズ終了後（実質的な試合開始時）にレイアウトを計算・固定
+            adjustHandLayout(true);
+
+            setTimeout(() => {
+                startTurn();
+            }, 1500);
+        }
+
+        function startTurn() {
+            const active = State.players.filter(p => !p.rank);
+            if (active.length <= 1) {
+                if (active.length === 1) {
+                    const p = active[0];
+                    p.rank = State.nextNormalRank; // 最後の1人は残った中で一番上の順位になる
+                    p.rankName = getRankName(p.rank);
+                }
+                endGame();
+                return;
+            }
+
+            const p = State.players[State.currentTurn];
+
+            // パスルール最終調整: 自分の番が回ってきたら確実にパス状態を解除
+            if (p.passed) {
+                p.passed = false;
+                // 描画更新して「パス中」表記を消す
+                render();
+            }
+
+            if (p.rank) {
+                State.currentTurn = (State.currentTurn + 1) % 5;
+                setTimeout(startTurn, 10);
+                return;
+            }
+
+            render();
+            if (p.isCPU) setTimeout(playCPU, WAIT_TIME_CPU_THINK);
+        }
+
+        function nextTurn() {
+            const activePlayers = State.players.filter(p => !p.rank);
+
+            // パス判定: 最後に出した人以外が全員連続でパスしたか
+            // もし最後に出した人が既に上がっている場合は、残りのプレイヤー全員がパスする必要がある
+            let neededPasses = activePlayers.length - 1;
+            if (State.players[State.lastPlayerIdx].rank) {
+                neededPasses = activePlayers.length;
+            }
+
+            if (State.consecutivePasses >= neededPasses && State.table.length > 0) {
+                // 場を流す
+                setTimeout(() => {
+                    clearTable();
+                    // 最後にカードを出した人からターンを開始
+                    // ただし上がっている場合は次のプレイヤーへ
+                    let nextStarter = State.lastPlayerIdx;
+                    while (State.players[nextStarter].rank) {
+                        nextStarter = (nextStarter + 1) % 5;
+                    }
+                    State.currentTurn = nextStarter;
+                    startTurn();
+                }, WAIT_TIME_CLEAR_TABLE);
+                return;
+            }
+
+            // 次のターンへ
+            State.currentTurn = (State.currentTurn + 1) % 5;
+            startTurn();
+        }
+
+        // === CPU AI ===
+
+        // AI用ヘルパー関数
+        function countStrongCards(hand) {
+            let count = { joker: 0, two: 0, ace: 0, eight: 0, spade3: 0 };
+            for (let c of hand) {
+                if (c.number === 0) count.joker++;
+                else if (c.number === 2) count.two++;
+                else if (c.number === 1) count.ace++;
+                else if (c.number === 8) count.eight++;
+                else if (c.number === 3 && c.suit === 'spade') count.spade3++;
+            }
+            return count;
+        }
+
+        // 手札の強さを数値化して返す（強カードの数など）
+        function evaluateHandStrength(hand, isRevolution) {
+            let score = 0;
+            for (let c of hand) {
+                const power = getCardPower(c.number, isRevolution);
+                score += power;
+            }
+            return score / hand.length; // 平均パワー
+        }
+
+        function isWeakHand(hand, isRevolution) {
+            const avgPower = evaluateHandStrength(hand, isRevolution);
+            // 平均パワーが低いかどうか（例: 7未満など）
+            return avgPower < 7;
+        }
+
+        function playCPU() {
+            const p = State.players[State.currentTurn];
+            // 出せる手をすべて取得 (反則上がりになる手は除外される)
+            let playable = getPlayableHands(p.hand);
+
+            if (playable.length === 0) {
+                State.consecutivePasses++;
+                showPassEffect();
+                render();
+                setTimeout(nextTurn, WAIT_TIME_PASS_DISPLAY);
+                return;
+            }
+
+            const handData = countStrongCards(p.hand);
+            const isWeak = isWeakHand(p.hand, State.isRevolution);
+
+            // 親の場合 (場が空)
+            if (State.lastPlayedCards.length === 0) {
+                // 1. 革命の活用: 手札が弱く、4枚以上出せるなら優先(通常ルール時)
+                if (!State.isRevolution && isWeak) {
+                    let revCandidates = playable.filter(cand => cand.length >= 4 && (getHandType(cand).type === 'normal' || getHandType(cand).type === 'stairs'));
+                    if (revCandidates.length > 0) {
+                        playCards(State.currentTurn, revCandidates[0]);
+                        return;
+                    }
+                }
+
+                // 2. 8切りの活用: 手札が弱いか、残り手札が少ない時に優先して場をリセット
+                let eightCandidates = playable.filter(cand => cand.some(c => c.number === 8));
+                if (eightCandidates.length > 0 && (isWeak || p.hand.length <= 4)) {
+                    playCards(State.currentTurn, eightCandidates[0]);
+                    return;
+                }
+
+                // 3. フィニッシュ狙い: 手札が少ない時は強いものから出して確実にあがる
+                if (p.hand.length <= 3) {
+                    // 元の配列を変えずに強い順にソートして出す
+                    let aggressive = [...playable].sort((a, b) =>
+                        getMaxPower(b, State.isRevolution) - getMaxPower(a, State.isRevolution)
+                    );
+                    playCards(State.currentTurn, aggressive[0]);
+                    return;
+                }
+
+                // 基本は最弱カード・ペア・階段から (playable[0]はgetPlayableHandsでセオリー通り優先度順にソート済)
+                playCards(State.currentTurn, playable[0]);
+                return;
+            }
+
+            // 子の場合 (場にカードがある)
+            const bestHand = playable[0];
+            const maxPower = getMaxPower(bestHand, State.isRevolution);
+
+            // カウンター警戒: 手札がまだ十分にある時のみ考慮
+            if (maxPower >= 14 && p.hand.length >= 3) {
+                const remainingJokers = 2 - State.playedCards.joker - handData.joker;
+                // ジョーカーのカウンターを警戒
+                if (remainingJokers > 0 && Math.random() < 0.3) {
+                    playable = [];
+                }
+
+                // スペ3警戒 (自分がジョーカー単体を出す場合)
+                if (playable.length > 0 && bestHand.length === 1 && bestHand[0].number === 0) {
+                    const isSpade3Played = State.playedCards.spade3 > 0 || handData.spade3 > 0;
+                    if (!isSpade3Played && !State.isRevolution && Math.random() < 0.6) {
+                        playable = []; // スペ3が残っている通常時ならジョーカー温存を検討
+                    }
+                }
+            }
+
+            if (playable.length > 0) {
+                // 出し惜しみせず、出せるなら出す (パス誘発・親取り)
+                playCards(State.currentTurn, playable[0]);
+            } else {
+                State.consecutivePasses++;
+                showPassEffect();
+                render();
+                setTimeout(nextTurn, WAIT_TIME_PASS_DISPLAY);
+            }
+        }
+
+        function getPlayableHands(hand) {
+            let candidates = [];
+            if (State.lastPlayedCards.length === 0) {
+                // 場が空の場合
+                hand.forEach(c => candidates.push([c]));
+                const groups = groupByNumber(hand);
+                Object.values(groups).forEach(g => {
+                    for (let i = 2; i <= 4; i++) {
+                        if (g.length >= i) candidates.push(g.slice(0, i));
+                    }
+                });
+                candidates.push(...getStairsInHand(hand));
+            } else {
+                // 場にカードがある場合
+                const lastType = getHandType(State.lastPlayedCards);
+                const lastCount = lastType.count;
+                if (lastType.type === 'normal') {
+                    if (lastCount === 1) {
+                        hand.forEach(c => { if (canPlay([c])) candidates.push([c]); });
+                    } else {
+                        const groups = groupByNumber(hand);
+                        Object.values(groups).forEach(g => {
+                            if (g.length >= lastCount) {
+                                const sub = g.slice(0, lastCount);
+                                if (canPlay(sub)) candidates.push(sub);
+                            }
+                        });
+                    }
+                } else if (lastType.type === 'stairs') {
+                    getStairsInHand(hand).forEach(s => { if (s.length === lastCount && canPlay(s)) candidates.push(s); });
+                }
+            }
+
+            // ★ 反則上がりの回避・諦めロジック ★
+            // カテゴリー分類: 1(通常上がり) < 2(通常出し) < 3(出すと手札が反則上がりカードのみ残る) < 4(反則上がり)
+            const getCategory = (cand) => {
+                if (cand.length === hand.length) {
+                    return isFoulWin(cand, State.isRevolution) ? 4 : 1;
+                } else {
+                    const rem = hand.filter(c => !cand.includes(c));
+                    const onlyFoul = rem.every(c => {
+                        if (c.number === 0) return true;
+                        if (c.number === 8) return true;
+                        if (State.isRevolution) {
+                            return c.number === 3;
+                        } else {
+                            return c.number === 2 || (c.number === 3 && c.suit === 'spade');
+                        }
+                    });
+                    return onlyFoul ? 3 : 2;
+                }
+            };
+
+            if (State.lastPlayedCards.length === 0) {
+                // 場が空の場合は、「複数枚（枚数が多い）」かつ「弱いカード」から優先して出すようにソート
+                candidates.sort((a, b) => {
+                    const catA = getCategory(a);
+                    const catB = getCategory(b);
+                    if (catA !== catB) return catA - catB;
+
+                    if (a.length !== b.length) {
+                        return b.length - a.length; // 枚数が多い順（ペアや階段を優先）
+                    }
+                    return getMaxPower(a, State.isRevolution) - getMaxPower(b, State.isRevolution); // 同じ枚数なら弱い順
+                });
+            } else {
+                // 場にカードがある場合は、単に「弱いカード」から優先して返す
+                candidates.sort((a, b) => {
+                    const catA = getCategory(a);
+                    const catB = getCategory(b);
+                    if (catA !== catB) return catA - catB;
+
+                    return getMaxPower(a, State.isRevolution) - getMaxPower(b, State.isRevolution);
+                });
+            }
+
+            return candidates;
+        }
+
+        function groupByNumber(hand) {
+            const g = {};
+            hand.forEach(c => { if (!g[c.number]) g[c.number] = []; g[c.number].push(c); });
+            return g;
+        }
+
+        function getStairsInHand(hand) {
+            const res = [];
+            const suits = {};
+            hand.filter(c => c.number !== 0).forEach(c => { if (!suits[c.suit]) suits[c.suit] = []; suits[c.suit].push(c); });
+            Object.values(suits).forEach(sCards => {
+                sCards.sort((a, b) => getCardPower(a.number, false) - getCardPower(b.number, false));
+                for (let i = 0; i < sCards.length; i++) {
+                    for (let len = 3; len <= sCards.length - i; len++) {
+                        const sub = sCards.slice(i, i + len);
+                        if (isSequential(sub)) res.push(sub);
+                    }
+                }
+            });
+            return res;
+        }
+
+        function isSequential(cards) {
+            const ps = cards.map(c => getCardPower(c.number, false));
+            for (let i = 0; i < ps.length - 1; i++) if (ps[i + 1] !== ps[i] + 1) return false;
+            return true;
+        }
+
+        // === UI表示 ===
+
+        function render() {
+            const curIdx = State.currentTurn;
+
+            for (let i = 1; i <= 4; i++) {
+                const p = State.players[i];
+                const el = document.getElementById(`cpu-cards-${i}`);
+                el.innerText = p.rank ? (p.isFoul ? '反則' : p.rankName) : `${p.hand.length}枚`;
+
+                // ランク表示の更新
+                const rankEl = document.querySelector(`#cpu-${i} .cpu-rank`);
+                if (rankEl) {
+                    if (p.rank) {
+                        rankEl.innerText = p.isFoul ? '反則' : p.rankName;
+                    } else if (p.lastRank) {
+                        rankEl.innerText = getRankName(p.lastRank);
+                    } else {
+                        rankEl.innerText = '';
+                    }
+                }
+
+                const container = document.getElementById(`cpu-${i}`);
+
+                // ターンハイライト
+                if (curIdx === i && !p.rank && !p.passed) container.classList.add('active-turn');
+                else container.classList.remove('active-turn');
+
+                if (p.passed) container.classList.add('passed-cpu'); else container.classList.remove('passed-cpu');
+            }
+
+            const handContainer = document.getElementById('player-hand');
+            handContainer.innerHTML = '';
+            const player = State.players[0];
+            const playerArea = document.getElementById('player-area');
+
+            // プレイヤーのターンハイライト
+            if (!State.isExchangePhase && curIdx === 0 && !player.rank && !player.passed) playerArea.classList.add('active-turn');
+            else if (State.isExchangePhase && (player.lastRank === 1 || player.lastRank === 2)) playerArea.classList.add('active-turn');
+            else playerArea.classList.remove('active-turn');
+
+            if (player.rank) {
+                document.getElementById('player-rank').innerText = player.rankName + (player.isFoul ? ' (反則)' : '');
+                handContainer.innerText = player.isFoul ? '反則上がりで負けました' : '上がりました';
+            } else {
+                if (player.lastRank) {
+                    document.getElementById('player-rank').innerText = getRankName(player.lastRank);
+                } else {
+                    document.getElementById('player-rank').innerText = '';
+                }
+                document.getElementById('player-pass-status').innerText = player.passed ? 'パス中' : '';
+                player.hand.forEach(card => {
+                    const isMyTurn = (!State.isExchangePhase && curIdx === 0 && !player.passed) ||
+                        (State.isExchangePhase && (player.lastRank === 1 || player.lastRank === 2));
+
+                    const el = createCardElement(card);
+
+                    if (isMyTurn) el.addEventListener('click', () => { el.classList.toggle('selected'); updatePlayButtonState(); });
+                    if (State.isExchangePhase && State.exchangeSelectedIds && State.exchangeSelectedIds.includes(card.id)) el.classList.add('selected');
+                    handContainer.appendChild(el);
+                });
+                // 動的な重なり調整を実行
+                adjustHandLayout();
+            }
+
+            const tableContainer = document.getElementById('table-cards');
+            tableContainer.innerHTML = '';
+            State.table.forEach(card => {
+                const el = createCardElement(card);
+                tableContainer.appendChild(el);
+            });
+
+            const ind = document.getElementById('turn-indicator');
+            if (!State.isExchangePhase) {
+                const p = State.players[curIdx];
+                if (p) ind.innerText = (p.rank || p.passed) ? "..." : `${p.name} のターン`;
+            }
+            if (State.isRevolution) document.getElementById('revolution-badge').classList.remove('hidden');
+            else document.getElementById('revolution-badge').classList.add('hidden');
+
+            updatePlayButtonState();
+
+            if (typeof renderDebugMode === 'function' && State.isDebugMode) renderDebugMode();
+        }
+
+        function getSuitSymbol(s) {
+            return { spade: '♠', heart: '♥', diamond: '♦', club: '♣', joker: '🃏' }[s] || '';
+        }
+
+        function createCardElement(card) {
+            const el = document.createElement('div');
+            el.className = `card ${card.suit}`;
+            el.dataset.suit = getSuitSymbol(card.suit);
+            el.dataset.number = getDisplayNumber(card.number);
+            el.dataset.id = card.id;
+
+            const centerMark = document.createElement('div');
+            centerMark.className = 'card-mark-center';
+            centerMark.innerText = getSuitSymbol(card.suit);
+            el.appendChild(centerMark);
+
+            return el;
+        }
+
+        function updatePlayButtonState() {
+            const playBtn = document.getElementById('btn-play');
+            const passBtn = document.getElementById('btn-pass');
+            const exchangeBtn = document.getElementById('btn-exchange');
+
+            if (State.isExchangePhase) {
+                playBtn.classList.add('hidden');
+                passBtn.classList.add('hidden');
+                exchangeBtn.classList.remove('hidden');
+
+                const p = State.players[0];
+                if (p.lastRank === 1 || p.lastRank === 2) {
+                    const selectedIds = Array.from(document.querySelectorAll('#player-hand .card.selected')).map(el => el.dataset.id);
+                    exchangeBtn.disabled = selectedIds.length !== State.exchangeCount;
+                } else {
+                    exchangeBtn.disabled = true;
+                }
+                return;
+            }
+
+            playBtn.classList.remove('hidden');
+            passBtn.classList.remove('hidden');
+            exchangeBtn.classList.add('hidden');
+
+            if (State.currentTurn !== 0 || State.players[0].passed || State.players[0].rank) {
+                playBtn.disabled = true; passBtn.disabled = true; return;
+            }
+            passBtn.disabled = false;
+            const selectedIds = Array.from(document.querySelectorAll('#player-hand .card.selected')).map(el => el.dataset.id);
+            const selectedCards = State.players[0].hand.filter(c => selectedIds.includes(c.id));
+            playBtn.disabled = !canPlay(selectedCards);
+        }
+
+        function endGame() {
+            const modal = document.getElementById('modal-overlay');
+            const sorted = [...State.players].sort((a, b) => a.rank - b.rank);
+            let html = "<ul>";
+            sorted.forEach(p => {
+                const foulText = p.isFoul ? ' (反則)' : '';
+                html += `<li>${p.rank}位: ${p.rankName}${foulText} (${p.name})</li>`;
+            });
+            html += "</ul>";
+            document.getElementById('modal-body').innerHTML = html;
+            modal.classList.remove('hidden');
+            const nextBtn = document.getElementById('btn-next-game');
+            nextBtn.classList.remove('hidden');
+            nextBtn.onclick = () => { State.gameCount++; initGame(); };
+        }
+
+        // === 動的なレイアウト調整 ===
+        function adjustHandLayout(forceRecalculate = false) {
+            const container = document.getElementById('player-hand');
+            const cards = container.querySelectorAll('.card');
+            if (cards.length === 0) return;
+
+            if (forceRecalculate || State.currentOverlap === 0) {
+                // マージンをリセットして計算
+                cards.forEach(c => c.style.marginLeft = '');
+
+                // 現在のコンテナ幅を取得
+                const containerWidth = container.clientWidth - 20; // パディング考慮
+                const cardWidth = cards[0].offsetWidth;
+                const totalNaturalWidth = cardWidth * cards.length;
+
+                // 枠に収まらない場合のみ重なりを計算
+                if (totalNaturalWidth > containerWidth) {
+                    State.currentOverlap = (totalNaturalWidth - containerWidth) / (cards.length - 1);
+                } else {
+                    State.currentOverlap = 0;
+                }
+            }
+
+            // 固定された重なり（State.currentOverlap）を適用
+            if (State.currentOverlap > 0) {
+                for (let i = 1; i < cards.length; i++) {
+                    cards[i].style.marginLeft = `-${State.currentOverlap}px`;
+                }
+            } else {
+                cards.forEach(c => c.style.marginLeft = '');
+            }
+        }
+
+        // ウィンドウリサイズ時にレイアウトを更新（強制再計算）
+        window.addEventListener('resize', () => {
+            adjustHandLayout(true);
+        });
+
+        document.getElementById('btn-play').addEventListener('click', playSelectedCards);
+        document.getElementById('btn-pass').addEventListener('click', handlePass);
+        document.getElementById('btn-exchange').addEventListener('click', executeExchange);
+        document.addEventListener('DOMContentLoaded', () => { initGame(); });
+
+        // === debug.js ===
+        document.addEventListener('keydown', (e) => {
+            // フォーム入力中などは反応させない
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.key.toLowerCase() === 'l') {
+                toggleDebugMode();
+            }
+        });
+
+        function toggleDebugMode() {
+            State.isDebugMode = !State.isDebugMode;
+            const overlay = document.getElementById('debug-overlay');
+            if (!overlay) return;
+
+            if (State.isDebugMode) {
+                overlay.classList.remove('hidden');
+                renderDebugMode();
+            } else {
+                overlay.classList.add('hidden');
+                // 手札を整理して画面を再描画
+                State.players.forEach(p => sortHand(p.hand));
+                render();
+            }
+        }
+
+        function renderDebugMode() {
+            const container = document.getElementById('debug-players');
+            if (!container) return;
+            container.innerHTML = '';
+
+            State.players.forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'debug-player-row';
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'debug-player-name';
+                nameEl.style.display = 'flex';
+                nameEl.style.alignItems = 'center';
+                nameEl.innerText = `${p.name} (ID: ${p.id}) - 残り${p.hand.length}枚`;
+
+                const addBtn = document.createElement('button');
+                addBtn.className = 'debug-add-btn';
+                addBtn.innerText = '+ カード追加';
+                addBtn.onclick = () => showCardSelector(p.id);
+                nameEl.appendChild(addBtn);
+
+                row.appendChild(nameEl);
+
+                const handEl = document.createElement('div');
+                handEl.className = 'debug-hand';
+                handEl.dataset.playerId = p.id;
+
+                // ドラッグ＆ドロップのイベント
+                handEl.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    handEl.classList.add('drag-over');
+                });
+
+                handEl.addEventListener('dragleave', (e) => {
+                    handEl.classList.remove('drag-over');
+                });
+
+                handEl.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    handEl.classList.remove('drag-over');
+                    const cardId = e.dataTransfer.getData('text/plain');
+                    if (cardId) {
+                        moveCardToPlayer(cardId, p.id);
+                    }
+                });
+
+                p.hand.forEach(c => {
+                    const cardEl = createCardElement(c);
+                    cardEl.draggable = true;
+
+                    // 削除ボタンの追加
+                    const removeBtn = document.createElement('div');
+                    removeBtn.className = 'card-remove-btn';
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        removeCardFromPlayer(c.id, p.id);
+                    };
+                    cardEl.appendChild(removeBtn);
+
+                    cardEl.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', c.id);
+                    });
+
+                    handEl.appendChild(cardEl);
+                });
+
+                row.appendChild(handEl);
+                container.appendChild(row);
+            });
+        }
+
+        function moveCardToPlayer(cardId, targetPlayerId) {
+            let sourcePlayer = null;
+            let cardObj = null;
+
+            for (let p of State.players) {
+                const idx = p.hand.findIndex(c => c.id === cardId);
+                if (idx !== -1) {
+                    sourcePlayer = p;
+                    cardObj = p.hand[idx];
+                    p.hand.splice(idx, 1);
+                    break;
+                }
+            }
+
+            if (cardObj) {
+                const targetPlayer = State.players.find(p => p.id === targetPlayerId);
+                if (targetPlayer) {
+                    targetPlayer.hand.push(cardObj);
+                    sortHand(targetPlayer.hand); // デバッグモード内でも都度ソートしておく
+                    renderDebugMode();
+                }
+            }
+        }
+
+        let selectorTargetPlayerId = null;
+        let selectorSelectedSuit = null;
+
+        function showCardSelector(playerId) {
+            selectorTargetPlayerId = playerId;
+            selectorSelectedSuit = null;
+            document.getElementById('card-selector-overlay').classList.remove('hidden');
+            renderSuitSelector();
+        }
+
+        function hideCardSelector() {
+            document.getElementById('card-selector-overlay').classList.add('hidden');
+        }
+
+        function renderSuitSelector() {
+            const grid = document.getElementById('selector-grid');
+            const title = document.getElementById('selector-step-title');
+            title.innerText = 'スートを選択してください';
+            grid.innerHTML = '';
+
+            const suits = [
+                { id: 'spade', name: '♠', class: 'suit-spade' },
+                { id: 'heart', name: '♥', class: 'suit-heart' },
+                { id: 'diamond', name: '♦', class: 'suit-diamond' },
+                { id: 'club', name: '♣', class: 'suit-club' },
+                { id: 'joker', name: 'Joker', class: 'suit-joker' }
+            ];
+
+            suits.forEach(s => {
+                const item = document.createElement('div');
+                item.className = `selector-item ${s.class}`;
+                item.innerText = s.name;
+                item.onclick = () => {
+                    if (s.id === 'joker') {
+                        addCardToHand(selectorTargetPlayerId, 'joker', 0);
+                        hideCardSelector();
+                    } else {
+                        selectorSelectedSuit = s.id;
+                        renderNumberSelector();
+                    }
+                };
+                grid.appendChild(item);
+            });
+        }
+
+        function renderNumberSelector() {
+            const grid = document.getElementById('selector-grid');
+            const title = document.getElementById('selector-step-title');
+            title.innerText = `${getSuitSymbol(selectorSelectedSuit)} の数字を選択してください`;
+            grid.innerHTML = '';
+
+            const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+            nums.forEach(n => {
+                const item = document.createElement('div');
+                item.className = `selector-item suit-${selectorSelectedSuit}`;
+                item.innerText = getDisplayNumber(n);
+                item.onclick = () => {
+                    addCardToHand(selectorTargetPlayerId, selectorSelectedSuit, n);
+                    hideCardSelector();
+                };
+                grid.appendChild(item);
+            });
+
+            // 戻るボタン
+            const backItem = document.createElement('div');
+            backItem.className = 'selector-item';
+            backItem.style.gridColumn = '1 / -1';
+            backItem.style.aspectRatio = 'auto';
+            backItem.style.height = '40px';
+            backItem.style.fontSize = '0.9em';
+            backItem.innerText = '← スート選択に戻る';
+            backItem.onclick = renderSuitSelector;
+            grid.appendChild(backItem);
+        }
+
+        function addCardToHand(playerId, suit, number) {
+            const player = State.players.find(p => p.id === playerId);
+            if (!player) return;
+
+            const newCard = {
+                suit: suit,
+                number: number,
+                id: `${suit}-${number}-${Date.now()}`
+            };
+
+            player.hand.push(newCard);
+            sortHand(player.hand);
+            renderDebugMode();
+        }
+
+        function removeCardFromPlayer(cardId, playerId) {
+            const player = State.players.find(p => p.id === playerId);
+            if (!player) return;
+            const idx = player.hand.findIndex(c => c.id === cardId);
+            if (idx !== -1) {
+                player.hand.splice(idx, 1);
+                renderDebugMode();
+            }
+        }
+    </script>
+</body>
+
+</html>
