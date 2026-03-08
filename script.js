@@ -15,7 +15,14 @@ let State = {
     nextFoulRank: 5,      // 次に反則上がりした人がなる順位 (5から減っていく)
     isExchangePhase: false,
     exchangeCount: 0,
-    exchangeSelectedIds: []
+    exchangeSelectedIds: [],
+    playedCards: {
+        joker: 0,
+        two: 0,
+        ace: 0,
+        eight: 0,
+        spade3: 0
+    }
 };
 
 // 待機時間の定数 (ミリ秒)
@@ -157,6 +164,15 @@ function playCards(playerIdx, cards) {
     State.lastPlayerIdx = playerIdx; // 出し手を記録
     State.consecutivePasses = 0;     // 出し手が出たのでパス数をリセット
 
+    // カードカウントの更新
+    for (let c of cards) {
+        if (c.number === 0) State.playedCards.joker++;
+        else if (c.number === 2) State.playedCards.two++;
+        else if (c.number === 1) State.playedCards.ace++;
+        else if (c.number === 8) State.playedCards.eight++;
+        else if (c.number === 3 && c.suit === 'spade') State.playedCards.spade3++;
+    }
+
     let resetImmediate = false;
     if (cards.some(c => c.number === 8)) resetImmediate = true;
     if (isSpade3Counter) resetImmediate = true;
@@ -253,6 +269,7 @@ function initGame() {
     State.isRevolution = false;
     State.nextNormalRank = 1;
     State.nextFoulRank = 5;
+    State.playedCards = { joker: 0, two: 0, ace: 0, eight: 0, spade3: 0 };
 
     // 2回目以降のゲームは大貧民（前回5位）から開始
     if (State.gameCount > 0) {
@@ -427,30 +444,110 @@ function nextTurn() {
 
 // === CPU AI ===
 
+// AI用ヘルパー関数
+function countStrongCards(hand) {
+    let count = { joker: 0, two: 0, ace: 0, eight: 0, spade3: 0 };
+    for (let c of hand) {
+        if (c.number === 0) count.joker++;
+        else if (c.number === 2) count.two++;
+        else if (c.number === 1) count.ace++;
+        else if (c.number === 8) count.eight++;
+        else if (c.number === 3 && c.suit === 'spade') count.spade3++;
+    }
+    return count;
+}
+
+// 手札の強さを数値化して返す（強カードの数など）
+function evaluateHandStrength(hand, isRevolution) {
+    let score = 0;
+    for (let c of hand) {
+        const power = getCardPower(c.number, isRevolution);
+        score += power;
+    }
+    return score / hand.length; // 平均パワー
+}
+
+function isWeakHand(hand, isRevolution) {
+    const avgPower = evaluateHandStrength(hand, isRevolution);
+    // 平均パワーが低いかどうか（例: 7未満など）
+    return avgPower < 7;
+}
+
 function playCPU() {
     const p = State.players[State.currentTurn];
     // 出せる手をすべて取得 (反則上がりになる手は除外される)
     let playable = getPlayableHands(p.hand);
 
-    // 強カード温存ロジック
-    // 残り枚数が4枚以上あり、かつ出そうとしている手が「最強クラス」の場合はパスを検討する
-    if (playable.length > 0 && p.hand.length >= 4) {
-        const bestHand = playable[0];
-        const maxPower = getMaxPower(bestHand, State.isRevolution);
-        // Joker(16), 2(15) など。革命時は 3(15), 4(14) などが対象になる想定
-        if (maxPower >= 15) {
-            // 場にカードが出ている（返しの場面）かつ、それが絶対必要な場面でなければ、高確率（80%）で温存パスする
-            if (State.lastPlayedCards.length > 0 && Math.random() < 0.8) {
-                playable = []; // パスを選択
+    if (playable.length === 0) {
+        State.consecutivePasses++;
+        showPassEffect();
+        render();
+        setTimeout(nextTurn, WAIT_TIME_PASS_DISPLAY);
+        return;
+    }
+
+    const handData = countStrongCards(p.hand);
+    const isWeak = isWeakHand(p.hand, State.isRevolution);
+
+    // 親の場合 (場が空)
+    if (State.lastPlayedCards.length === 0) {
+        // 1. 革命の活用: 手札が弱く、4枚以上出せるなら優先(通常ルール時)
+        if (!State.isRevolution && isWeak) {
+            let revCandidates = playable.filter(cand => cand.length >= 4 && getHandType(cand).type === 'normal');
+            if (revCandidates.length > 0) {
+                playCards(State.currentTurn, revCandidates[0]);
+                return;
+            }
+        }
+
+        // 2. 8切りの活用: 手札が弱いか、残り手札が少ない時に優先して場をリセット
+        let eightCandidates = playable.filter(cand => cand.some(c => c.number === 8));
+        if (eightCandidates.length > 0 && (isWeak || p.hand.length <= 4)) {
+            playCards(State.currentTurn, eightCandidates[0]);
+            return;
+        }
+
+        // 3. フィニッシュ狙い: 手札が少ない時は強いものから出して確実にあがる
+        if (p.hand.length <= 3) {
+            // 元の配列を変えずに強い順にソートして出す
+            let aggressive = [...playable].sort((a, b) =>
+                getMaxPower(b, State.isRevolution) - getMaxPower(a, State.isRevolution)
+            );
+            playCards(State.currentTurn, aggressive[0]);
+            return;
+        }
+
+        // 基本は最弱カード・ペア・階段から (playable[0]はgetPlayableHandsでセオリー通り優先度順にソート済)
+        playCards(State.currentTurn, playable[0]);
+        return;
+    }
+
+    // 子の場合 (場にカードがある)
+    const bestHand = playable[0];
+    const maxPower = getMaxPower(bestHand, State.isRevolution);
+
+    // カウンター警戒: 手札がまだ十分にある時のみ考慮
+    if (maxPower >= 14 && p.hand.length >= 3) {
+        const remainingJokers = 2 - State.playedCards.joker - handData.joker;
+        // ジョーカーのカウンターを警戒
+        if (remainingJokers > 0 && Math.random() < 0.3) {
+            playable = [];
+        }
+
+        // スペ3警戒 (自分がジョーカー単体を出す場合)
+        if (playable.length > 0 && bestHand.length === 1 && bestHand[0].number === 0) {
+            const isSpade3Played = State.playedCards.spade3 > 0 || handData.spade3 > 0;
+            if (!isSpade3Played && !State.isRevolution && Math.random() < 0.6) {
+                playable = []; // スペ3が残っている通常時ならジョーカー温存を検討
             }
         }
     }
 
     if (playable.length > 0) {
-        // 出せる手の中で最良（ソート済みなので先頭）を出す
+        // 出し惜しみせず、出せるなら出す (パス誘発・親取り)
         playCards(State.currentTurn, playable[0]);
     } else {
-        State.consecutivePasses++; // パス数を加算
+        State.consecutivePasses++;
         showPassEffect();
         render();
         setTimeout(nextTurn, WAIT_TIME_PASS_DISPLAY);
@@ -573,6 +670,19 @@ function render() {
         const p = State.players[i];
         const el = document.getElementById(`cpu-cards-${i}`);
         el.innerText = p.rank ? (p.isFoul ? '反則' : p.rankName) : `${p.hand.length}枚`;
+
+        // ランク表示の更新
+        const rankEl = document.querySelector(`#cpu-${i} .cpu-rank`);
+        if (rankEl) {
+            if (p.rank) {
+                rankEl.innerText = p.isFoul ? '反則' : p.rankName;
+            } else if (p.lastRank) {
+                rankEl.innerText = getRankName(p.lastRank);
+            } else {
+                rankEl.innerText = '';
+            }
+        }
+
         const container = document.getElementById(`cpu-${i}`);
 
         // ターンハイライト
@@ -593,9 +703,14 @@ function render() {
     else playerArea.classList.remove('active-turn');
 
     if (player.rank) {
-        document.getElementById('player-rank').innerText = player.rankName;
+        document.getElementById('player-rank').innerText = player.rankName + (player.isFoul ? ' (反則)' : '');
         handContainer.innerText = player.isFoul ? '反則上がりで負けました' : '上がりました';
     } else {
+        if (player.lastRank) {
+            document.getElementById('player-rank').innerText = getRankName(player.lastRank);
+        } else {
+            document.getElementById('player-rank').innerText = '';
+        }
         document.getElementById('player-pass-status').innerText = player.passed ? 'パス中' : '';
         player.hand.forEach(card => {
             const isMyTurn = (!State.isExchangePhase && curIdx === 0 && !player.passed) ||
