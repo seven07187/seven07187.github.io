@@ -177,7 +177,8 @@ function playCards(playerIdx, cards) {
     if (cards.some(c => c.number === 8)) resetImmediate = true;
     if (isSpade3Counter) resetImmediate = true;
 
-    if (cards.length >= 4 && getHandType(cards).type === 'normal') State.isRevolution = !State.isRevolution;
+    const type = getHandType(cards).type;
+    if (cards.length >= 4 && (type === 'normal' || type === 'stairs')) State.isRevolution = !State.isRevolution;
 
     render();
 
@@ -493,7 +494,7 @@ function playCPU() {
     if (State.lastPlayedCards.length === 0) {
         // 1. 革命の活用: 手札が弱く、4枚以上出せるなら優先(通常ルール時)
         if (!State.isRevolution && isWeak) {
-            let revCandidates = playable.filter(cand => cand.length >= 4 && getHandType(cand).type === 'normal');
+            let revCandidates = playable.filter(cand => cand.length >= 4 && (getHandType(cand).type === 'normal' || getHandType(cand).type === 'stairs'));
             if (revCandidates.length > 0) {
                 playCards(State.currentTurn, revCandidates[0]);
                 return;
