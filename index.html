@@ -1,0 +1,4798 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>OVERTALE - 探索型RPG</title>
+  <meta name="description" content="OVERTALE - Undertale風探索RPG × 東方風弾幕シューティング。森の奥に潜む杉の巨木に挑め！">
+  <style>
+/* ===== OVERTALE - Global Styles ===== */
+
+/* Reset & Base */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-panel: #1a1a2e;
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --accent-red: #ff3355;
+  --accent-yellow: #ffcc33;
+  --accent-green: #33ff88;
+  --accent-blue: #3388ff;
+  --accent-purple: #aa55ff;
+  --hp-green: #22cc44;
+  --hp-yellow: #cccc22;
+  --hp-red: #cc2222;
+  --border-color: #e8e8f0;
+  --font-pixel: 'Press Start 2P', 'DotGothic16', monospace;
+  --font-jp: 'DotGothic16', 'MS Gothic', monospace;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-jp);
+}
+
+/* ===== Screen Management ===== */
+.screen {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+.screen.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen.overlay {
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+/* ===== Title Screen ===== */
+#title-screen {
+  background: var(--bg-primary);
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-container {
+  text-align: center;
+  z-index: 2;
+  animation: titleFadeIn 1.5s ease-out;
+}
+
+@keyframes titleFadeIn {
+  from { opacity: 0; transform: translateY(-30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.title-logo {
+  font-family: var(--font-pixel);
+  font-size: clamp(2rem, 8vw, 5rem);
+  color: var(--text-primary);
+  text-shadow:
+    0 0 20px rgba(255, 51, 85, 0.6),
+    0 0 40px rgba(255, 51, 85, 0.3),
+    0 0 80px rgba(255, 51, 85, 0.1);
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+  animation: titleGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+  from { text-shadow: 0 0 20px rgba(255, 51, 85, 0.6), 0 0 40px rgba(255, 51, 85, 0.3); }
+  to { text-shadow: 0 0 30px rgba(170, 85, 255, 0.7), 0 0 60px rgba(170, 85, 255, 0.4); }
+}
+
+.title-sub {
+  font-size: clamp(0.8rem, 2vw, 1.2rem);
+  color: var(--text-secondary);
+  margin-bottom: 3rem;
+  letter-spacing: 0.3em;
+  animation: subtitlePulse 4s ease-in-out infinite;
+}
+
+@keyframes subtitlePulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.title-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.title-option {
+  font-family: var(--font-jp);
+  font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+  padding: 0.6em 2em;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  letter-spacing: 0.1em;
+}
+
+.title-option.selected {
+  color: var(--accent-yellow);
+  transform: scale(1.1);
+}
+
+.title-option.selected::before {
+  content: '❤️';
+  position: absolute;
+  left: -1.5em;
+  animation: heartBeat 0.8s ease-in-out infinite;
+}
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.title-hint {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin-top: 1rem;
+}
+
+/* Title particles */
+.title-particles {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  background: var(--accent-yellow);
+  border-radius: 50%;
+  opacity: 0;
+  animation: floatParticle 6s linear infinite;
+}
+
+@keyframes floatParticle {
+  0% { opacity: 0; transform: translateY(100vh) scale(0); }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+}
+
+/* ===== Game Screen ===== */
+#game-screen {
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+#game-canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 2px solid var(--border-color);
+  box-shadow: 0 0 30px rgba(255, 51, 85, 0.15);
+}
+
+/* Status Bar */
+#status-bar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.8rem 1.5rem;
+  background: var(--bg-panel);
+  border: 2px solid var(--border-color);
+  border-top: none;
+  font-family: var(--font-jp);
+  font-size: 0.85rem;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-label {
+  color: var(--accent-yellow);
+  font-weight: bold;
+  font-size: 0.75rem;
+}
+
+.status-value {
+  color: var(--text-primary);
+}
+
+/* HP Bar */
+.hp-bar-container {
+  width: 120px;
+  height: 14px;
+  background: var(--hp-red);
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.hp-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--hp-green);
+  transition: width 0.4s ease, background-color 0.4s ease;
+}
+
+/* ===== Battle Screen ===== */
+#battle-screen {
+  background: var(--bg-primary);
+  flex-direction: column;
+}
+
+#battle-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(800px, 95vw);
+}
+
+/* Enemy Display */
+#enemy-display {
+  text-align: center;
+  padding: 1rem;
+  animation: enemyAppear 0.6s ease-out;
+}
+
+@keyframes enemyAppear {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+#enemy-canvas {
+  image-rendering: pixelated;
+}
+
+#enemy-name {
+  font-family: var(--font-jp);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-top: 0.3rem;
+  letter-spacing: 0.1em;
+}
+
+#enemy-hp-bar-container {
+  width: 200px;
+  height: 10px;
+  background: var(--hp-red);
+  border: 1px solid var(--border-color);
+  margin: 0.3rem auto 0;
+  overflow: hidden;
+}
+
+#enemy-hp-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--hp-green);
+  transition: width 0.5s ease;
+}
+
+/* Battle Textbox */
+#battle-textbox {
+  width: 100%;
+  min-height: 60px;
+  padding: 1rem 1.2rem;
+  background: var(--bg-primary);
+  border: 3px solid var(--border-color);
+  font-family: var(--font-jp);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+#battle-text {
+  white-space: pre-wrap;
+}
+
+/* Bullet Area */
+#bullet-area-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 3px solid var(--border-color);
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  display: none;
+}
+
+#bullet-area-container.active {
+  display: block;
+}
+
+#bullet-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Battle Commands */
+#battle-commands {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.battle-cmd {
+  flex: 1;
+  max-width: 150px;
+  padding: 0.7em 0.5em;
+  background: var(--bg-primary);
+  border: 3px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-jp);
+  font-size: clamp(0.65rem, 1.8vw, 0.85rem);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+}
+
+.battle-cmd:hover,
+.battle-cmd.selected {
+  background: var(--border-color);
+  color: var(--bg-primary);
+  transform: scale(1.05);
+}
+
+.battle-cmd .cmd-icon {
+  font-size: 1em;
+}
+
+/* Battle Status */
+#battle-status {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.6rem 1.5rem;
+  background: var(--bg-panel);
+  border: 2px solid var(--border-color);
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.battle-status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ===== Menu Screen ===== */
+.menu-container {
+  background: var(--bg-panel);
+  border: 3px solid var(--border-color);
+  padding: 2rem;
+  min-width: min(400px, 90vw);
+  max-width: 500px;
+  animation: menuSlideIn 0.3s ease-out;
+}
+
+@keyframes menuSlideIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.menu-title {
+  font-family: var(--font-jp);
+  font-size: 1.3rem;
+  color: var(--accent-yellow);
+  text-align: center;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.2em;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.8rem;
+}
+
+.menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.menu-option {
+  font-family: var(--font-jp);
+  font-size: 1rem;
+  padding: 0.6em 1em;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  padding-left: 2em;
+}
+
+.menu-option:hover,
+.menu-option.selected {
+  color: var(--accent-yellow);
+}
+
+.menu-option.selected::before {
+  content: '❤️';
+  position: absolute;
+  left: 0.2em;
+}
+
+.menu-detail {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  padding: 1rem;
+  min-height: 100px;
+  font-family: var(--font-jp);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+/* ===== Mobile Controls ===== */
+#mobile-controls {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0;
+  width: 100%; height: auto;
+  padding: 1rem;
+  z-index: 200;
+  pointer-events: none;
+}
+
+#joystick-area {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  pointer-events: auto;
+}
+
+#joystick-base {
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#joystick-stick {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  position: absolute;
+  transition: transform 0.05s;
+}
+
+#mobile-buttons {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  gap: 0.8rem;
+  pointer-events: auto;
+}
+
+.mobile-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-btn:active {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(0.9);
+}
+
+/* ===== Notifications & Effects ===== */
+.notification {
+  position: fixed;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.8em 2em;
+  background: var(--bg-panel);
+  border: 2px solid var(--accent-yellow);
+  color: var(--accent-yellow);
+  font-family: var(--font-jp);
+  font-size: 0.9rem;
+  z-index: 500;
+  animation: notifSlide 0.3s ease-out;
+}
+
+.notification.hidden { display: none; }
+
+@keyframes notifSlide {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.screen-flash {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 400;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.screen-flash.active {
+  opacity: 1;
+  background: white;
+  animation: flashOut 0.3s ease-out forwards;
+}
+
+@keyframes flashOut {
+  from { opacity: 0.8; }
+  to { opacity: 0; }
+}
+
+/* Damage shake */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+.shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Level up effect */
+@keyframes levelUp {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); text-shadow: 0 0 20px var(--accent-yellow); }
+  100% { transform: scale(1); }
+}
+
+.level-up {
+  animation: levelUp 0.6s ease-in-out;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px), (pointer: coarse) {
+  #mobile-controls {
+    display: block;
+  }
+
+  #status-bar {
+    min-width: auto;
+    width: 95vw;
+    gap: 1rem;
+    font-size: 0.7rem;
+    padding: 0.5rem 0.8rem;
+  }
+
+  .hp-bar-container {
+    width: 80px;
+    height: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .battle-cmd {
+    padding: 0.5em 0.3em;
+    font-size: 0.6rem;
+  }
+
+  .menu-container {
+    padding: 1rem;
+  }
+}
+
+/* ===== Shop Screen ===== */
+.shop-container {
+  background: var(--bg-panel);
+  border: 3px solid var(--border-color);
+  padding: 1.5rem;
+  width: min(500px, 95vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: menuSlideIn 0.3s ease-out;
+}
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.shop-name {
+  font-family: var(--font-jp);
+  font-size: 1.2rem;
+  color: var(--accent-yellow);
+  letter-spacing: 0.1em;
+}
+
+.shop-gold-display {
+  font-family: var(--font-jp);
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.shop-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.shop-tab {
+  flex: 1;
+  text-align: center;
+  padding: 0.5em;
+  font-family: var(--font-jp);
+  font-size: 0.9rem;
+  border: 2px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: var(--bg-primary);
+}
+
+.shop-tab.active {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: #fff;
+}
+
+.shop-list {
+  flex: 1;
+  overflow-y: auto;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  min-height: 200px;
+  margin-bottom: 1rem;
+}
+
+.shop-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8em 1em;
+  font-family: var(--font-jp);
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.shop-item.selected {
+  background: rgba(255, 204, 51, 0.2);
+  color: var(--accent-yellow);
+}
+
+.shop-item.cant-afford {
+  opacity: 0.5;
+}
+
+.shop-item-count {
+  font-size: 0.8em;
+  color: var(--text-secondary);
+  margin-left: 0.5em;
+}
+
+.shop-desc {
+  min-height: 60px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  padding: 0.8rem;
+  font-family: var(--font-jp);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.shop-hint {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ===== Text Scene (Opening/Ending) ===== */
+#text-scene-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+#text-scene-overlay.active {
+  display: flex;
+  animation: textSceneFadeIn 0.5s ease-out;
+}
+
+@keyframes textSceneFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#text-scene-container {
+  max-width: min(700px, 90vw);
+  text-align: center;
+  padding: 2rem;
+}
+
+#text-scene-line {
+  font-family: var(--font-jp);
+  font-size: clamp(1rem, 2.5vw, 1.3rem);
+  color: #ffffff;
+  line-height: 2;
+  letter-spacing: 0.1em;
+  white-space: pre-wrap;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* ===== Event Choice ===== */
+.event-choice-container {
+  display: none;
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.92);
+  border: 3px solid var(--border-color);
+  padding: 1.5rem 2.5rem;
+  z-index: 310;
+  min-width: 250px;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: choiceAppear 0.3s ease-out;
+}
+
+.event-choice-container.active {
+  display: flex;
+}
+
+@keyframes choiceAppear {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.event-choice-option {
+  font-family: var(--font-jp);
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  padding: 0.7em 1em;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  padding-left: 2em;
+  letter-spacing: 0.05em;
+}
+
+.event-choice-option:hover,
+.event-choice-option.selected {
+  color: var(--accent-yellow);
+}
+
+.event-choice-option.selected::before {
+  content: '❤️';
+  position: absolute;
+  left: 0.2em;
+  animation: heartBeat 0.8s ease-in-out infinite;
+}
+
+</style>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ===== タイトル画面 ===== -->
+  <div id="title-screen" class="screen active">
+    <div class="title-container">
+      <h1 class="title-logo">OVERTALE</h1>
+      <p class="title-sub">森の奥へ…</p>
+      <div class="title-menu">
+        <div class="title-option selected" data-action="start">はじめから</div>
+        <div class="title-option" data-action="continue">つづきから</div>
+      </div>
+      <p class="title-hint">Z / Enter / 画面タップ で決定</p>
+    </div>
+    <div class="title-particles" id="title-particles"></div>
+  </div>
+
+  <!-- ===== ゲーム画面 ===== -->
+  <div id="game-screen" class="screen">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- ステータスバー -->
+    <div id="status-bar">
+      <div class="status-item">
+        <span class="status-label">LV</span>
+        <span id="status-level" class="status-value">1</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">HP</span>
+        <div class="hp-bar-container">
+          <div id="hp-bar" class="hp-bar"></div>
+        </div>
+        <span id="status-hp" class="status-value">20/20</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">EXP</span>
+        <span id="status-exp" class="status-value">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">G</span>
+        <span id="status-gold" class="status-value">100</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 戦闘画面 ===== -->
+  <div id="battle-screen" class="screen">
+    <div id="battle-container">
+      <!-- 敵表示エリア -->
+      <div id="enemy-display">
+        <canvas id="enemy-canvas" width="200" height="200"></canvas>
+        <div id="enemy-name"></div>
+        <div id="enemy-hp-bar-container">
+          <div id="enemy-hp-bar"></div>
+        </div>
+      </div>
+
+      <!-- テキストボックス -->
+      <div id="battle-textbox">
+        <p id="battle-text"></p>
+      </div>
+
+      <!-- 弾幕エリア -->
+      <div id="bullet-area-container">
+        <canvas id="bullet-canvas"></canvas>
+      </div>
+
+      <!-- コマンドUI -->
+      <div id="battle-commands">
+        <button class="battle-cmd selected" data-cmd="fight" id="cmd-fight">
+          <span class="cmd-icon">⚔️</span>たたかう
+        </button>
+        <button class="battle-cmd" data-cmd="talk" id="cmd-talk">
+          <span class="cmd-icon">💬</span>はなす
+        </button>
+        <button class="battle-cmd" data-cmd="item" id="cmd-item">
+          <span class="cmd-icon">🎒</span>アイテム
+        </button>
+        <button class="battle-cmd" data-cmd="flee" id="cmd-flee">
+          <span class="cmd-icon">🏃</span>にげる
+        </button>
+      </div>
+
+      <!-- 戦闘ステータス -->
+      <div id="battle-status">
+        <div class="battle-status-item">
+          <span class="status-label">LV</span>
+          <span id="battle-level" class="status-value">1</span>
+        </div>
+        <div class="battle-status-item">
+          <span class="status-label">HP</span>
+          <div class="hp-bar-container">
+            <div id="battle-hp-bar" class="hp-bar"></div>
+          </div>
+          <span id="battle-hp" class="status-value">20/20</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== メニュー画面 ===== -->
+  <div id="menu-screen" class="screen overlay">
+    <div class="menu-container">
+      <h2 class="menu-title">メニュー</h2>
+      <div class="menu-options">
+        <div class="menu-option selected" data-menu="status">ステータス</div>
+        <div class="menu-option" data-menu="items">もちもの</div>
+        <div class="menu-option" data-menu="save">セーブ</div>
+        <div class="menu-option" data-menu="load">ロード</div>
+        <div class="menu-option" data-menu="close">とじる</div>
+      </div>
+      <div id="menu-detail" class="menu-detail"></div>
+    </div>
+  </div>
+
+  <!-- ===== ショップ画面 ===== -->
+  <div id="shop-screen" class="screen overlay">
+    <div class="shop-container">
+      <div class="shop-header">
+        <h2 id="shop-name" class="shop-name">ショップ</h2>
+        <div class="shop-gold-display">所持金: <span id="shop-gold">100 G</span></div>
+      </div>
+      <div class="shop-tabs">
+        <div class="shop-tab active" data-cat="items">アイテム</div>
+        <div class="shop-tab" data-cat="weapons">武器</div>
+        <div class="shop-tab" data-cat="armors">防具</div>
+      </div>
+      <div id="shop-list" class="shop-list"></div>
+      <div id="shop-desc" class="shop-desc"></div>
+      <div class="shop-hint">Z: 買う / X: やめる / 左右: タブ切替</div>
+    </div>
+  </div>
+
+  <!-- ===== スマホコントロール ===== -->
+  <div id="mobile-controls">
+    <div id="joystick-area">
+      <div id="joystick-base">
+        <div id="joystick-stick"></div>
+      </div>
+    </div>
+    <div id="mobile-buttons">
+      <button class="mobile-btn" id="btn-confirm">Z</button>
+      <button class="mobile-btn" id="btn-cancel">X</button>
+      <button class="mobile-btn" id="btn-menu">C</button>
+    </div>
+  </div>
+
+  <!-- ===== 通知/エフェクト ===== -->
+  <div id="notification" class="notification hidden"></div>
+  <div id="screen-flash" class="screen-flash"></div>
+
+  <!-- ===== テキストシーン ===== -->
+  <div id="text-scene-overlay" class="screen">
+    <div id="text-scene-container">
+      <p id="text-scene-line"></p>
+    </div>
+  </div>
+
+  <!-- ===== イベント選択肢 ===== -->
+  <div id="event-choice-container" class="event-choice-container"></div>
+
+  <!-- Scripts -->
+  <script>
+// ===== input.js - 入力管理 =====
+const Input = (() => {
+  const keys = {};
+  const justPressed = {};
+  const prevKeys = {};
+  let mouseConfirmJustPressed = false;
+
+  // キーマッピング
+  const KEY_MAP = {
+    'ArrowUp': 'up',
+    'ArrowDown': 'down',
+    'ArrowLeft': 'left',
+    'ArrowRight': 'right',
+    'z': 'confirm',
+    'Z': 'confirm',
+    'Enter': 'confirm',
+    'x': 'cancel',
+    'X': 'cancel',
+    'Shift': 'cancel',
+    'c': 'menu',
+    'C': 'menu',
+  };
+
+  // キーボードイベント
+  document.addEventListener('keydown', (e) => {
+    const action = KEY_MAP[e.key];
+    if (action) {
+      e.preventDefault();
+      keys[action] = true;
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    const action = KEY_MAP[e.key];
+    if (action) {
+      keys[action] = false;
+    }
+  });
+
+  // スマホジョイスティック
+  const joystickBase = document.getElementById('joystick-base');
+  const joystickStick = document.getElementById('joystick-stick');
+  let joystickActive = false;
+  let joystickOrigin = { x: 0, y: 0 };
+  const joystickVector = { x: 0, y: 0 };
+  const JOYSTICK_RADIUS = 35;
+
+  if (joystickBase) {
+    joystickBase.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      joystickActive = true;
+      const rect = joystickBase.getBoundingClientRect();
+      joystickOrigin.x = rect.left + rect.width / 2;
+      joystickOrigin.y = rect.top + rect.height / 2;
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!joystickActive) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      let dx = touch.clientX - joystickOrigin.x;
+      let dy = touch.clientY - joystickOrigin.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > JOYSTICK_RADIUS) {
+        dx = (dx / dist) * JOYSTICK_RADIUS;
+        dy = (dy / dist) * JOYSTICK_RADIUS;
+      }
+
+      joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
+      joystickVector.x = dx / JOYSTICK_RADIUS;
+      joystickVector.y = dy / JOYSTICK_RADIUS;
+
+      // 方向キーに変換
+      keys['up'] = joystickVector.y < -0.3;
+      keys['down'] = joystickVector.y > 0.3;
+      keys['left'] = joystickVector.x < -0.3;
+      keys['right'] = joystickVector.x > 0.3;
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+      if (!joystickActive) return;
+      joystickActive = false;
+      joystickStick.style.transform = '';
+      joystickVector.x = 0;
+      joystickVector.y = 0;
+      keys['up'] = false;
+      keys['down'] = false;
+      keys['left'] = false;
+      keys['right'] = false;
+    });
+  }
+
+  // スマホボタン
+  const setupMobileBtn = (id, action) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      keys[action] = true;
+    }, { passive: false });
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      keys[action] = false;
+    }, { passive: false });
+  };
+
+  setupMobileBtn('btn-confirm', 'confirm');
+  setupMobileBtn('btn-cancel', 'cancel');
+  setupMobileBtn('btn-menu', 'menu');
+
+  return {
+    /** 現在キーが押されているか */
+    isDown(action) {
+      return !!keys[action];
+    },
+
+    /** フレーム内で新しく押されたか */
+    isJustPressed(action) {
+      return !!justPressed[action];
+    },
+
+    /** フレーム終了時に呼ぶ */
+    update() {
+      for (const action in keys) {
+        // キーボードまたはタップの状態を反映
+        let isPressed = !!keys[action];
+        
+        // confirmアクションの場合、タップ/クリックも判定に含める
+        if (action === 'confirm' && mouseConfirmJustPressed) {
+          isPressed = true;
+        }
+
+        justPressed[action] = isPressed && !prevKeys[action];
+        prevKeys[action] = isPressed;
+      }
+      // タップフラグのリセット
+      mouseConfirmJustPressed = false;
+    },
+
+    /** ジョイスティックのベクトル */
+    getJoystick() {
+      return { ...joystickVector };
+    },
+
+    /** 強制的に confirm を発生させる (外部用) */
+    triggerConfirm() {
+      mouseConfirmJustPressed = true;
+    }
+  };
+})();
+
+</script>
+  <script>
+// ===== items.js - アイテム・装備・ショップ定義 =====
+const Items = (() => {
+  // --- アイテム定義 ---
+  // type: 'heal' (HP回復), 'cure' (状態異常回復), 'heal_cure' (両方), 'key' (大事なもの)
+  const ITEM_DATA = {
+    megusuri: { name: "目薬", type: "heal", effect: { hp: 10 }, price: 20, desc: "HPを10回復" },
+    tissue: { name: "ポケットティッシュ", type: "cure", effect: { cure: "sneeze" }, price: 10, desc: "くしゃみ状態を解除" },
+    strong_megusuri: { name: "強力目薬", type: "heal", effect: { hp: 30 }, price: 80, desc: "HPを30回復" },
+    allergy_med: { name: "抗アレルギー薬", type: "heal_cure", effect: { hp: 30, cureAll: true }, price: 150, desc: "HP30回復+状態異常全回復" },
+    medical_kit: { name: "医療キット", type: "heal", effect: { hp: 50 }, price: 200, desc: "HPを50回復" },
+    oxygen_spray: { name: "酸素スプレー", type: "heal", effect: { hp: 20 }, price: 60, desc: "HPを20回復" },
+    herb: { name: "ハーブ", type: "heal", effect: { hp: 15 }, price: 30, desc: "HPを15回復" },
+    healing_water: { name: "癒しの水", type: "heal", effect: { hp: 40, cureAll: true }, price: 120, desc: "HP40回復+状態異常全回復" },
+  };
+
+  // --- 武器定義 ---
+  const WEAPON_DATA = {
+    paper_mask: { name: "紙マスク", attack: 1, price: 30, desc: "攻撃力+1" },
+    enhanced_mask: { name: "強化マスク", attack: 3, price: 80, desc: "攻撃力+3" },
+    air_spray: { name: "空気清浄スプレー", attack: 5, price: 150, desc: "攻撃力+5" },
+    pollen_blower: { name: "電動花粉ブロワー", attack: 7, price: 300, desc: "攻撃力+7" },
+    pollen_vacuum: { name: "花粉吸引機", attack: 9, price: 500, desc: "攻撃力+9" },
+    wind_gun: { name: "風圧ガン", attack: 11, price: 700, desc: "攻撃力+11" },
+    natures_wind: { name: "自然の風", attack: 13, price: 1000, desc: "攻撃力+13" },
+    purify_leaf: { name: "浄化の葉", attack: 15, price: 1200, desc: "攻撃力+15" },
+  };
+
+  // --- 防具定義 ---
+  const ARMOR_DATA = {
+    pollen_goggles: { name: "花粉防止ゴーグル", defense: 2, price: 50, desc: "防御力+2" },
+    high_mask: { name: "高性能マスク", defense: 5, price: 200, desc: "防御力+5" },
+    protect_suit: { name: "防護スーツ", defense: 10, price: 500, desc: "防御力+10" },
+    full_protect: { name: "完全防護服", defense: 13, price: 800, desc: "防御力+13" },
+    old_mask: { name: '古い防護マスク', defense: 15, price: 0, desc: '防御力+15: 生存者のお守り' },
+    spirit_cloak: { name: "精霊のマント", defense: 16, price: 1100, desc: "防御力+16" },
+  };
+
+  // --- ショップ定義 ---
+  const SHOP_DATA = {
+    suginashi: {
+      name: "スギナシ薬局",
+      weapons: ['paper_mask', 'enhanced_mask'],
+      armors: ['pollen_goggles'],
+      items: ['megusuri', 'tissue'],
+    },
+    hanamizu: {
+      name: "ハナミズ・デパート",
+      weapons: ['air_spray', 'pollen_blower'],
+      armors: ['high_mask', 'protect_suit'],
+      items: ['strong_megusuri', 'allergy_med'],
+    },
+    greenline: {
+      name: "前線補給所",
+      weapons: ['pollen_vacuum', 'wind_gun'],
+      armors: ['full_protect'],
+      items: ['medical_kit', 'oxygen_spray'],
+    },
+    shida: {
+      name: "シダの恵み亭",
+      weapons: ['natures_wind', 'purify_leaf'],
+      armors: ['spirit_cloak'],
+      items: ['herb', 'healing_water'],
+    },
+  };
+
+  let isShopOpen = false;
+  let currentShopId = null;
+  let shopCategory = 'items'; // 'items', 'weapons', 'armors'
+  let shopSelectedIndex = 0;
+  let shopList = [];
+
+  return {
+    getItem(id) { return ITEM_DATA[id]; },
+    getWeapon(id) { return WEAPON_DATA[id]; },
+    getArmor(id) { return ARMOR_DATA[id]; },
+    getShop(id) { return SHOP_DATA[id]; },
+    getAnyItem(id) { return ITEM_DATA[id] || WEAPON_DATA[id] || ARMOR_DATA[id]; },
+
+    /** アイテム使用処理 */
+    useItemEffect(itemId) {
+      const item = ITEM_DATA[itemId];
+      if (!item) return false;
+      
+      let used = false;
+      if (item.effect.hp) {
+        if (Player.state.hp < Player.state.maxHp) {
+          Player.heal(item.effect.hp);
+          used = true;
+        }
+      }
+      if (item.effect.cureAll || item.effect.cure) {
+        // 状態異常はフェーズ2で詳細実装するが、今はプレースホルダーとしてフラグは立てる
+        // （Player.state.statusEffects をクリアする処理）
+        if (Player.state.statusEffects && Player.state.statusEffects.length > 0) {
+          Player.state.statusEffects = [];
+          used = true;
+        }
+      }
+      return used;
+    },
+
+    /** ショップ開閉 */
+    openShop(shopId) {
+      if (!SHOP_DATA[shopId]) return;
+      currentShopId = shopId;
+      isShopOpen = true;
+      shopCategory = 'items';
+      shopSelectedIndex = 0;
+      
+      const el = document.getElementById('shop-screen');
+      if (el) {
+        el.classList.add('active');
+        document.getElementById('shop-name').textContent = SHOP_DATA[shopId].name;
+        document.getElementById('shop-gold').textContent = `${Player.state.gold} G`;
+        this.updateShopUI();
+      }
+    },
+
+    closeShop() {
+      isShopOpen = false;
+      currentShopId = null;
+      const el = document.getElementById('shop-screen');
+      if (el) el.classList.remove('active');
+    },
+
+    isShopUIOpen() { return isShopOpen; },
+
+    /** ショップUI更新 */
+    updateShopUI() {
+      if (!isShopOpen) return;
+      
+      // カテゴリタブ更新
+      document.querySelectorAll('.shop-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.cat === shopCategory);
+      });
+
+      // リスト更新
+      const shop = SHOP_DATA[currentShopId];
+      if (shopCategory === 'items') shopList = shop.items.map(id => ({ id, ...ITEM_DATA[id] }));
+      else if (shopCategory === 'weapons') shopList = shop.weapons.map(id => ({ id, ...WEAPON_DATA[id] }));
+      else if (shopCategory === 'armors') shopList = shop.armors.map(id => ({ id, ...ARMOR_DATA[id] }));
+
+      // 選択インデックスの範囲チェック
+      if (shopSelectedIndex >= shopList.length) shopSelectedIndex = Math.max(0, shopList.length - 1);
+
+      const listEl = document.getElementById('shop-list');
+      listEl.innerHTML = '';
+      
+      shopList.forEach((item, i) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = `shop-item ${i === shopSelectedIndex ? 'selected' : ''} ${Player.state.gold < item.price ? 'cant-afford' : ''}`;
+        
+        let equipped = false;
+        let countText = '';
+        if (shopCategory === 'weapons' && Player.state.weapon === item.id) equipped = true;
+        if (shopCategory === 'armors' && Player.state.armor === item.id) equipped = true;
+        if (shopCategory === 'items') {
+          const count = Player.getItemCount(item.id);
+          if (count > 0) countText = `(所持:${count})`;
+        }
+
+        itemEl.innerHTML = `
+          <div class="shop-item-name">${equipped ? 'E ' : ''}${item.name} <span class="shop-item-count">${countText}</span></div>
+          <div class="shop-item-price">${item.price} G</div>
+        `;
+        // タップで選択＆購入
+        itemEl.addEventListener('click', () => {
+          shopSelectedIndex = i;
+          Input.triggerConfirm();
+          this.updateShopUI();
+        });
+        listEl.appendChild(itemEl);
+      });
+
+      // 詳細表示
+      const detailEl = document.getElementById('shop-desc');
+      if (shopList[shopSelectedIndex]) {
+        detailEl.textContent = shopList[shopSelectedIndex].desc;
+      } else {
+        detailEl.textContent = '';
+      }
+    },
+
+    /** ショップ入力処理（main.jsから呼ばれる） */
+    handleShopInput() {
+      if (!isShopOpen) return;
+
+      if (Input.isJustPressed('cancel')) {
+        this.closeShop();
+        return;
+      }
+
+      if (Input.isJustPressed('left') || Input.isJustPressed('right')) {
+        const cats = ['items', 'weapons', 'armors'];
+        let idx = cats.indexOf(shopCategory);
+        idx = Input.isJustPressed('right') ? (idx + 1) % 3 : (idx + 2) % 3;
+        shopCategory = cats[idx];
+        shopSelectedIndex = 0;
+        this.updateShopUI();
+        return;
+      }
+
+      if (Input.isJustPressed('up') && shopSelectedIndex > 0) {
+        shopSelectedIndex--;
+        this.updateShopUI();
+      } else if (Input.isJustPressed('down') && shopSelectedIndex < shopList.length - 1) {
+        shopSelectedIndex++;
+        this.updateShopUI();
+      }
+
+      if (Input.isJustPressed('confirm') && shopList.length > 0) {
+        const item = shopList[shopSelectedIndex];
+        if (Player.state.gold >= item.price) {
+          // 購入確認なしで直接買う（シンプルスタイル）
+          Player.state.gold -= item.price;
+          document.getElementById('shop-gold').textContent = `${Player.state.gold} G`;
+          UI.showNotification(`${item.name} を買った！`, 1500);
+
+          if (shopCategory === 'items' || shopCategory === 'weapons' || shopCategory === 'armors') {
+            Player.addItem(item.id, 1);
+          }
+          this.updateShopUI();
+        } else {
+          UI.showNotification('お金が足りない！', 1000);
+        }
+      }
+    },
+
+    /** 初期化 (イベントリスナー登録) */
+    initListeners() {
+      document.querySelectorAll('.shop-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          if (isShopOpen) {
+            shopCategory = tab.dataset.cat;
+            shopSelectedIndex = 0;
+            this.updateShopUI();
+          }
+        });
+      });
+    }
+  };
+})();
+
+// リスナー初期化
+Items.initListeners();
+
+</script>
+  <script>
+// ===== player.js - プレイヤー管理 =====
+const Player = (() => {
+  const state = {
+    level: 1,
+    hp: 20,
+    maxHp: 20,
+    attack: 5,
+    defense: 0,
+    exp: 0,
+    gold: 100,
+    // マップ上の位置（スギナシ町広場）
+    mapX: 25 * 32 + 16,
+    mapY: 20 * 32 + 16,
+    // 弾幕フェーズのハート位置
+    heartX: 0,
+    heartY: 0,
+    // 装備
+    weapon: null,   // 武器ID
+    armor: null,    // 防具ID
+    // インベントリ: [{ id: string, count: number }]
+    inventory: [],
+    // ストーリーフラグ
+    flags: {
+      routePoint: 0,
+      noKill: true,
+      boss1Cleared: false,
+      boss2Cleared: false,
+      finalUnlocked: false,
+      killCount: 0,
+      helpNature: false,
+      listenedToPriestess: false,
+      // 廃墟マップ用フラグ
+      readSign: false,
+      lootedShops: 0,
+      powerOn: false,
+      shelterRestored: false,
+      readDiaryCount: 0,
+      learnedForestTruth: false,
+      learnedCoexistenceHint: false,
+      memorialSeen: false
+    },
+    // 状態異常リスト（例: 'sneeze'）
+    statusEffects: [],
+    // 無敵時間（ダメージ後のiフレーム）
+    invincible: 0,
+  };
+
+  const HEART_SIZE = 12;
+  const HEART_SPEED = 1.5;
+
+  return {
+    state,
+    HEART_SIZE,
+
+    /** ステータスの初期化 */
+    init() {
+      state.level = 1;
+      state.hp = 20;
+      state.maxHp = 20;
+      state.attack = 5;
+      state.defense = 0;
+      state.exp = 0;
+      state.gold = 100;
+      state.mapX = 25 * 32 + 16;
+      state.mapY = 20 * 32 + 16;
+      state.weapon = null;
+      state.armor = null;
+      state.inventory = [];
+      state.flags = {
+        routePoint: 0,
+        noKill: true,
+        boss1Cleared: false,
+        boss2Cleared: false,
+        finalUnlocked: false,
+        killCount: 0,
+        helpNature: false,
+        listenedToPriestess: false,
+        // 廃墟マップ用フラグ
+        readSign: false,
+        lootedShops: 0,
+        powerOn: false,
+        shelterRestored: false,
+        readDiaryCount: 0,
+        learnedForestTruth: false,
+        learnedCoexistenceHint: false,
+        memorialSeen: false
+      };
+      state.statusEffects = [];
+      state.invincible = 0;
+    },
+
+    /** 弾幕フェーズでのハート移動 */
+    updateHeart(bounds) {
+      if (Input.isDown('up')) state.heartY -= HEART_SPEED;
+      if (Input.isDown('down')) state.heartY += HEART_SPEED;
+      if (Input.isDown('left')) state.heartX -= HEART_SPEED;
+      if (Input.isDown('right')) state.heartX += HEART_SPEED;
+
+      // 弾幕エリア境界制限
+      state.heartX = Math.max(bounds.left + HEART_SIZE, Math.min(bounds.right - HEART_SIZE, state.heartX));
+      state.heartY = Math.max(bounds.top + HEART_SIZE, Math.min(bounds.bottom - HEART_SIZE, state.heartY));
+
+      // 状態異常「くしゃみ」：たまにランダムに吹き飛ぶ
+      if (state.statusEffects && state.statusEffects.includes('sneeze')) {
+        if (Math.random() < 0.02) { // 2%の確率で毎フレームくしゃみ
+          const dashX = (Math.random() - 0.5) * 40;
+          const dashY = (Math.random() - 0.5) * 40;
+          state.heartX = Math.max(bounds.left + HEART_SIZE, Math.min(bounds.right - HEART_SIZE, state.heartX + dashX));
+          state.heartY = Math.max(bounds.top + HEART_SIZE, Math.min(bounds.bottom - HEART_SIZE, state.heartY + dashY));
+          
+          // UIで知らせる（くしゃみエフェクト）
+          if (typeof UI !== 'undefined' && Math.random() < 0.3) {
+            UI.showNotification('ハックション！', 500);
+          }
+        }
+      }
+
+      // 無敵時間カウントダウン
+      if (state.invincible > 0) state.invincible--;
+    },
+
+    /** ハートの描画 */
+    drawHeart(ctx) {
+      const x = state.heartX;
+      const y = state.heartY;
+      const s = HEART_SIZE;
+
+      ctx.save();
+
+      // 無敵時間中は点滅
+      if (state.invincible > 0 && Math.floor(state.invincible / 3) % 2 === 0) {
+        ctx.globalAlpha = 0.4;
+      }
+
+      ctx.fillStyle = '#ff3355';
+      ctx.beginPath();
+      // ハート形状
+      ctx.moveTo(x, y - s * 0.3);
+      ctx.bezierCurveTo(x - s, y - s, x - s, y, x, y + s * 0.7);
+      ctx.bezierCurveTo(x + s, y, x + s, y - s, x, y - s * 0.3);
+      ctx.fill();
+
+      ctx.restore();
+    },
+
+    /** 実効攻撃力（装備込み） */
+    getAttack() {
+      let atk = state.attack;
+      if (state.weapon && typeof Items !== 'undefined') {
+        const w = Items.getWeapon(state.weapon);
+        if (w) atk += w.attack;
+      }
+      return atk;
+    },
+
+    /** 実効防御力（装備込み） */
+    getDefense() {
+      let def = state.defense;
+      if (state.armor && typeof Items !== 'undefined') {
+        const a = Items.getArmor(state.armor);
+        if (a) def += a.defense;
+      }
+      return def;
+    },
+
+    /** ダメージ処理 */
+    takeDamage(amount) {
+      if (state.invincible > 0) return false;
+      const def = this.getDefense();
+      const actual = Math.max(1, amount - Math.floor(def / 3));
+      state.hp = Math.max(0, state.hp - actual);
+      state.invincible = 45; // 約0.75秒の無敵
+      return true;
+    },
+
+    /** 回復 */
+    heal(amount) {
+      state.hp = Math.min(state.maxHp, state.hp + amount);
+    },
+
+    /** EXP取得＋レベルアップ判定 */
+    gainExp(amount) {
+      state.exp += amount;
+      let leveled = false;
+      while (state.exp >= state.level * 10) {
+        state.exp -= state.level * 10;
+        state.level++;
+        state.maxHp += 5;
+        state.attack += 2;
+        leveled = true;
+      }
+      return leveled;
+    },
+
+    /** ゴールド獲得 */
+    gainGold(amount) {
+      state.gold += amount;
+    },
+
+    /** アイテム追加 */
+    addItem(itemId, count = 1) {
+      const existing = state.inventory.find(i => i.id === itemId);
+      if (existing) {
+        existing.count += count;
+      } else {
+        state.inventory.push({ id: itemId, count });
+      }
+    },
+
+    /** アイテム使用（1個減らす） */
+    useItem(itemId) {
+      const existing = state.inventory.find(i => i.id === itemId);
+      if (!existing || existing.count <= 0) return false;
+      existing.count--;
+      if (existing.count <= 0) {
+        state.inventory = state.inventory.filter(i => i.count > 0);
+      }
+      return true;
+    },
+
+    /** アイテム所持数 */
+    getItemCount(itemId) {
+      const existing = state.inventory.find(i => i.id === itemId);
+      return existing ? existing.count : 0;
+    },
+
+    /** HP比率 */
+    hpRatio() {
+      return state.maxHp > 0 ? state.hp / state.maxHp : 0;
+    },
+
+    /** データエクスポート（セーブ用） */
+    exportData() {
+      return { 
+        ...state, 
+        inventory: [...state.inventory], 
+        flags: { ...state.flags },
+        statusEffects: [...(state.statusEffects || [])]
+      };
+    },
+
+    /** データインポート（ロード用） */
+    importData(data) {
+      Object.assign(state, data);
+      // 旧セーブデータ互換
+      if (!state.flags) state.flags = { routePoint: 0, noKill: true, boss1Cleared: false, boss2Cleared: false, finalUnlocked: false, killCount: 0, helpNature: false, listenedToPriestess: false };
+      if (state.flags.routePoint === undefined) state.flags.routePoint = 0;
+      if (state.flags.noKill === undefined) state.flags.noKill = true;
+      if (state.flags.boss1Cleared === undefined) state.flags.boss1Cleared = false;
+      if (state.flags.boss2Cleared === undefined) state.flags.boss2Cleared = false;
+      if (state.flags.finalUnlocked === undefined) state.flags.finalUnlocked = false;
+      if (state.flags.killCount === undefined) state.flags.killCount = 0;
+      if (state.flags.helpNature === undefined) state.flags.helpNature = false;
+      if (state.flags.listenedToPriestess === undefined) state.flags.listenedToPriestess = false;
+      if (state.flags.readSign === undefined) state.flags.readSign = false;
+      if (state.flags.lootedShops === undefined) state.flags.lootedShops = 0;
+      if (state.flags.powerOn === undefined) state.flags.powerOn = false;
+      if (state.flags.shelterRestored === undefined) state.flags.shelterRestored = false;
+      if (state.flags.readDiaryCount === undefined) state.flags.readDiaryCount = 0;
+      if (state.flags.learnedForestTruth === undefined) state.flags.learnedForestTruth = false;
+      if (state.flags.learnedCoexistenceHint === undefined) state.flags.learnedCoexistenceHint = false;
+      if (state.flags.memorialSeen === undefined) state.flags.memorialSeen = false;
+      if (!state.inventory) state.inventory = [];
+      if (!state.statusEffects) state.statusEffects = [];
+      if (state.gold === undefined) state.gold = 100;
+      if (state.weapon === undefined) state.weapon = null;
+      if (state.armor === undefined) state.armor = null;
+      if (state.defense === undefined) state.defense = 0;
+    }
+  };
+})();
+
+</script>
+  <script>
+// ===== map.js - オープンワールドマップ管理 =====
+const GameMap = (() => {
+  const TILE_SIZE = 32;
+
+  const TILE_COLORS = {
+    0: '#1a2a1a', 1: '#2a1a0a', 2: '#1a3a1a', 3: '#3a3a1a', 4: '#3a1a1a',
+    5: '#2a2a30', 6: '#2a2520', 7: '#0a1a3a', 8: '#d0e0f0', 9: '#7a90a0',
+    10: '#b0c0d0', 11: '#3a2a2a', 12: '#2a1a1a', 13: '#4a2a0a', 14: '#35353d',
+    15: '#1a1a20',
+  };
+
+  const MAPS = {};
+
+  const fill = (map, sx, sy, w, h, tile) => {
+    for (let y = sy; y < sy + h && y < map.length; y++)
+      for (let x = sx; x < sx + w && x < map[0].length; x++) map[y][x] = tile;
+  };
+
+  const houseExterior = (map, sx, sy, w, h, doorX, wallT, roofT) => {
+    fill(map, sx, sy, w, h, wallT);
+    fill(map, sx, sy, w, Math.floor(h/2), roofT);
+    map[sy + h - 1][doorX] = 13;
+  };
+
+  function generateWorldMap() {
+    const W = 120, H = 200;
+    const map = Array(H).fill().map(() => Array(W).fill(1));
+
+    // 1. スギナシ町 (X:10~40, Y:10~30)
+    fill(map, 10, 10, 30, 20, 6);
+    fill(map, 10, 10, 30, 1, 1); fill(map, 10, 29, 30, 1, 1);
+    fill(map, 10, 10, 1, 20, 1); fill(map, 39, 10, 1, 20, 1);
+    map[20][39] = 6; map[21][39] = 6; // East Exit
+
+    houseExterior(map, 12, 12, 8, 5, 15, 1, 1); // doc
+    houseExterior(map, 21, 12, 8, 5, 24, 1, 1); // shop
+    houseExterior(map, 30, 12, 8, 5, 33, 1, 1); // old
+    map[26][25] = 3;
+
+    // 2. フィールド1: 森 (東へ -> 南へ)
+    fill(map, 40, 15, 45, 11, 0); fill(map, 40, 20, 45, 4, 6);
+    fill(map, 40, 15, 45, 1, 1); fill(map, 40, 25, 45, 1, 1);
+    fill(map, 75, 25, 11, 35, 0); fill(map, 78, 25, 4, 35, 6);
+    fill(map, 75, 25, 1, 35, 1); fill(map, 85, 25, 1, 35, 1);
+    map[23][60]=2; map[23][61]=2; map[22][62]=2;
+    map[40][80]=2; map[41][80]=2; map[50][79]=2;
+
+    // 3. フィールド1後半: 雪への変化 (南へ)
+    fill(map, 75, 60, 11, 15, 8); fill(map, 78, 60, 4, 15, 8);
+    fill(map, 75, 60, 1, 15, 9); fill(map, 85, 60, 1, 15, 9);
+    map[65][79]=10; map[70][81]=10;
+
+    // 4. ハナミズシティ (X:65~95, Y:75~95)
+    fill(map, 65, 75, 30, 20, 8);
+    fill(map, 65, 75, 30, 1, 9); fill(map, 65, 94, 30, 1, 9);
+    fill(map, 65, 75, 1, 20, 9); fill(map, 94, 75, 1, 20, 9);
+    map[75][65]=8; map[76][65]=8; map[77][65]=8; // West Exit
+    map[75][78]=8; map[75][79]=8; map[75][80]=8; map[75][81]=8; // North Entrance
+
+    houseExterior(map, 67, 78, 8, 5, 70, 9, 8);
+    houseExterior(map, 77, 78, 8, 5, 80, 9, 8);
+    houseExterior(map, 81, 86, 8, 5, 84, 9, 8);
+    map[88][80] = 3;
+
+    // 5. フィールド2: 雪原 (西へ -> 南へ)
+    fill(map, 25, 70, 40, 11, 8); fill(map, 25, 74, 40, 4, 8);
+    fill(map, 25, 70, 40, 1, 9); fill(map, 25, 80, 40, 1, 9);
+    fill(map, 25, 80, 11, 30, 8); fill(map, 28, 80, 4, 30, 8);
+    fill(map, 25, 80, 1, 30, 9); fill(map, 35, 80, 1, 30, 9);
+    map[75][45]=10; map[95][30]=10;
+
+    // 6. グリーンライン (X:15~45, Y:110~130)
+    fill(map, 15, 110, 30, 20, 6);
+    fill(map, 15, 110, 30, 1, 1); fill(map, 15, 129, 30, 1, 12);
+    fill(map, 15, 110, 1, 20, 1); fill(map, 44, 110, 1, 20, 1);
+    map[110][28]=6; map[110][29]=6; map[110][30]=6; map[110][31]=6; // North Entrance
+    map[129][35]=11; map[129][36]=11; map[129][37]=11; map[129][38]=11; // South Exit
+    map[119][44]=6; map[120][44]=6; // East Exit (to Ruins)
+
+    houseExterior(map, 18, 114, 8, 5, 21, 1, 1);
+    houseExterior(map, 27, 114, 8, 5, 30, 1, 1);
+    houseExterior(map, 18, 122, 8, 5, 21, 1, 1);
+    map[125][32] = 3;
+
+    // 6.5 花粉廃墟 (X:50~80, Y:105~125) - グリーンラインの東
+    fill(map, 50, 105, 30, 20, 5); // 荒れた地面(アスファルト/焼け跡タイルの代用)
+    fill(map, 50, 105, 30, 1, 15); fill(map, 50, 124, 30, 1, 15);
+    fill(map, 50, 105, 1, 20, 15); fill(map, 79, 105, 1, 20, 15);
+    
+    // 連絡通路 (グリーンライン〜花粉廃墟)
+    fill(map, 45, 118, 5, 4, 6);
+    map[119][50]=5; map[120][50]=5; map[121][50]=5; 
+
+    // 廃墟内の建物 (避難所、病院、学校)
+    // 避難所 (X:52, Y:108)
+    houseExterior(map, 52, 108, 10, 6, 56, 12, 15);
+    // 商店街跡 (X:65, Y:108)
+    houseExterior(map, 65, 108, 12, 6, 70, 12, 15);
+    // 病院跡 (X:52, Y:116)
+    houseExterior(map, 52, 116, 8, 6, 55, 12, 15);
+    // 学校跡 (X:65, Y:116)
+    houseExterior(map, 65, 116, 12, 6, 71, 12, 15);
+    
+    // 中央広場 (記念碑)
+    map[115][62] = 4; map[115][63] = 4; // 記念碑代わりのタイル配置
+
+    // 7. フィールド3: 洞窟 (南へ -> 東へ -> 南へ)
+    fill(map, 30, 130, 15, 11, 11); fill(map, 35, 130, 4, 11, 11);
+    fill(map, 30, 130, 1, 11, 12); fill(map, 44, 130, 1, 11, 12);
+    fill(map, 45, 130, 50, 11, 11); fill(map, 45, 134, 50, 4, 11);
+    fill(map, 45, 130, 50, 1, 12); fill(map, 45, 140, 50, 1, 12);
+    for (let y = 134; y <= 137; y++) map[y][44] = 11; // 洞窟の垂直・水平通路を接続
+    fill(map, 85, 140, 11, 20, 11); fill(map, 88, 140, 4, 20, 11);
+    fill(map, 85, 140, 1, 20, 12); fill(map, 95, 140, 1, 20, 12);
+    map[135][60]=2; map[150][90]=2;
+
+    // 連絡通路の自然な境界（草と荒れ地）
+    for (let x = 45; x <= 49; x++) {
+      if (Math.random() > 0.5) map[118][x] = 5;
+      if (Math.random() > 0.5) map[121][x] = 5;
+    }
+
+    // 8. シダの里 (X:75~105, Y:160~180)
+    fill(map, 75, 160, 30, 20, 11);
+    fill(map, 75, 160, 30, 1, 12); fill(map, 75, 179, 30, 1, 12);
+    fill(map, 75, 160, 1, 20, 12); fill(map, 104, 160, 1, 20, 12);
+    map[160][88]=11; map[160][89]=11; map[160][90]=11; map[160][91]=11;
+    map[179][78]=11; map[179][79]=11; map[179][80]=11; map[179][81]=11;
+
+    houseExterior(map, 78, 164, 8, 5, 81, 12, 12);
+    houseExterior(map, 88, 164, 8, 5, 91, 12, 12);
+    houseExterior(map, 92, 172, 8, 5, 95, 12, 12);
+    map[175][85] = 3;
+    fill(map, 96, 168, 6, 4, 7);
+
+    // 9. 杉樹海〜ボス (南へ -> 西へ -> 南へ)
+    fill(map, 75, 180, 11, 6, 0); fill(map, 78, 180, 4, 6, 6);
+    fill(map, 75, 180, 1, 6, 1); fill(map, 85, 180, 1, 6, 1);
+    fill(map, 50, 180, 25, 11, 0); fill(map, 50, 183, 25, 4, 6);
+    fill(map, 50, 180, 25, 1, 1); fill(map, 50, 190, 25, 1, 1);
+    for (let y = 183; y <= 186; y++) map[y][75] = 6; // 杉樹海の垂直・水平通路を接続
+    map[185][65]=2; map[183][80]=2;
+
+    fill(map, 45, 190, 20, 10, 0);
+    fill(map, 45, 190, 20, 1, 1); fill(map, 45, 199, 20, 1, 1);
+    fill(map, 45, 190, 1, 10, 1); fill(map, 64, 190, 1, 10, 1);
+    fill(map, 50, 187, 4, 3, 6);
+    map[190][50]=6; map[190][51]=6; map[190][52]=6; map[190][53]=6;
+    fill(map, 52, 193, 6, 2, 4);
+    map[195][54] = 3;
+
+    // 気候や地形の自然なグラデーション
+    for (let y = 55; y <= 65; y++) {
+      const ratio = (y - 55) / 10;
+      for (let x = 75; x <= 85; x++) {
+        if (Math.random() < ratio) {
+          if (map[y][x] === 0 || map[y][x] === 6) map[y][x] = 8;
+          if (map[y][x] === 1) map[y][x] = 9;
+          if (map[y][x] === 2) map[y][x] = 10;
+        }
+      }
+    }
+    for (let y = 145; y <= 155; y++) {
+      const ratio = (y - 145) / 10;
+      for (let x = 25; x <= 35; x++) {
+        if (Math.random() < ratio) {
+          if (map[y][x] === 8) map[y][x] = 0;
+          if (map[y][x] === 9) map[y][x] = 1;
+          if (map[y][x] === 10) map[y][x] = 2;
+        }
+      }
+      for (let x = 28; x < 32; x++) {
+        if (map[y][x] === 0 || map[y][x] === 8) {
+          map[y][x] = Math.random() < ratio ? 6 : 8;
+        }
+      }
+    }
+    for (let y = 175; y <= 185; y++) {
+      const ratio = (y - 175) / 10;
+      for (let x = 30; x <= 45; x++) {
+        if (Math.random() < ratio) {
+          if (map[y][x] === 0 || map[y][x] === 6) map[y][x] = 11;
+          if (map[y][x] === 1) map[y][x] = 12;
+        }
+      }
+    }
+
+    return map;
+  }
+
+  function generateHouseMap(w, h) {
+    const map = [];
+    for (let y = 0; y < h; y++) {
+      map[y] = [];
+      for (let x = 0; x < w; x++) map[y][x] = (y===0 || y===h-1 || x===0 || x===w-1) ? 15 : 14;
+    }
+    const dx = Math.floor(w/2);
+    map[h-1][dx] = 13; map[h-1][dx-1] = 15; map[h-1][dx+1] = 15;
+    return map;
+  }
+
+  function setupMaps() {
+    const createHouse = (id, outX, outY, npc) => ({
+      id, w: 13, h: 9, data: generateHouseMap(13, 9),
+      warps: [{ x: 6, y: 8, target: 'world', tx: outX, ty: outY }],
+      npcs: npc ? [npc] : []
+    });
+
+    MAPS['world'] = {
+      id: 'world', w: 120, h: 200, data: generateWorldMap(),
+      warps: [
+        { x: 15, y: 16, target: 'sugina_doc', tx: 6, ty: 7 },
+        { x: 24, y: 16, target: 'sugina_shop', tx: 6, ty: 7 },
+        { x: 33, y: 16, target: 'sugina_old', tx: 6, ty: 7 },
+        { x: 70, y: 82, target: 'hana_shop', tx: 6, ty: 7 },
+        { x: 80, y: 82, target: 'hana_res', tx: 6, ty: 7 },
+        { x: 84, y: 90, target: 'hana_house1', tx: 6, ty: 7 },
+        { x: 21, y: 118, target: 'green_shop', tx: 6, ty: 7 },
+        { x: 30, y: 118, target: 'green_house1', tx: 6, ty: 7 },
+        { x: 21, y: 126, target: 'green_house2', tx: 6, ty: 7 },
+        { x: 81, y: 168, target: 'shida_shop', tx: 6, ty: 7 },
+        { x: 91, y: 168, target: 'shida_priestess', tx: 6, ty: 7 },
+        { x: 95, y: 176, target: 'shida_villager', tx: 6, ty: 7 },
+        // 廃墟ワープ
+        { x: 56, y: 113, target: 'ruins_shelter', tx: 6, ty: 7 },
+        { x: 55, y: 121, target: 'ruins_hospital', tx: 6, ty: 7 },
+        { x: 71, y: 121, target: 'ruins_school', tx: 6, ty: 7 },
+        { x: 70, y: 113, target: 'ruins_shop', tx: 6, ty: 7 },
+      ],
+      npcs: [
+        { id: 'kid1', x: 20, y: 20, name: '子供', zone: 'suginashi', dialogue: ['くしゃみで空飛べそう！', '（ハックション！！！）', '（子供は本当に反動で空へ飛んでいってしまった…）', '……。'] },
+        { id: 'salary_man', x: 86, y: 80, name: 'サラリーマン', zone: 'hanamizu', dialogue: ['ハクション！ハクション！', 'すみません…ハクション！', '（鼻水の大洪水が起きた！）', 'スーツが台無しだ…'] },
+        { id: 'soldier', x: 35, y: 124, name: '兵士', zone: 'greenline', dialogue: ['森の奥は危険だ。', '敵の攻撃パターンをよく観察しろ。', '無理だと思ったら逃げるのも手だ。'] },
+        { id: 'ruins_guard', x: 44, y: 119, name: '見張り', zone: 'greenline', dialogue: ['この先は「黄霧の町」…今はもうただの花粉廃墟だ。', 'あの町は一夜にして濃い花粉に飲み込まれた。', '中にはまだ生存者がいるかもしれないが…行くなら気をつけるんだな。'] },
+        { id: 'kid2', x: 86, y: 170, name: '子供', zone: 'shida', dialogue: ['花粉？べつにこわくないよ！', 'お花も木もともだちだもん！'] },
+        // 廃墟マップのイベントシンボル (NPCとして配置)
+        { id: 'ruins_sign', x: 50, y: 119, name: '看板', zone: 'ruins', dialogue: ['（壊れた看板だ。かすかに文字が読み取れる…）\n「ようこそ、黄霧の町へ」', '（下には手書きのメモが貼り付けられている）\n『避難所へ急げ！』'], isObject: true, inspectEvent: 'ruins_sign' },
+        { id: 'ruins_door', x: 56, y: 113, name: '避難所の扉', zone: 'ruins', dialogue: ['（扉は固く閉ざされている。\n電力が供給されていないようだ…）'], isObject: true, inspectEvent: 'ruins_door' },
+        { id: 'ruins_memorial', x: 63, y: 115, name: '記念碑', zone: 'ruins', dialogue: ['（倒れた木を模した古い記念碑だ…）\n『花粉の嵐に消えた、愛する隣人たちへ』', '（…だた倒せば終わるのだろうか？）'], isObject: true, inspectEvent: 'ruins_memorial' },
+        { id: 'ruins_generator', x: 69, y: 107, name: '非常用電源', zone: 'ruins', dialogue: ['（錆びついた発電機がある。まだ動きそうだ…）'], isObject: true, inspectEvent: 'ruins_generator' },
+      ]
+    };
+
+    MAPS['sugina_doc'] = createHouse('sugina_doc', 15, 17, { id: 'doctor', x: 6, y: 4, name: '医者', dialogue: ['花粉症には気をつけてね！', 'マスクは必需品だよ。', '森の奥に行くほど花粉がひどくなる…'] });
+    MAPS['sugina_shop'] = createHouse('sugina_shop', 24, 17, { id: 'shop_sugina', x: 6, y: 4, name: 'ショップ店員', isShop: true, shopId: 'suginashi', dialogue: ['いらっしゃい！'] });
+    MAPS['sugina_old'] = createHouse('sugina_old', 33, 17, { id: 'old_man', x: 6, y: 4, name: '老人', dialogue: ['昔は杉は優しい存在だった…', '花粉を飛ばすようになったのは\nここ最近のことじゃ…', '何かが杉を怒らせているのかもしれん。'] });
+    MAPS['hana_shop'] = createHouse('hana_shop', 70, 83, { id: 'merchant', x: 6, y: 4, name: '商人', isShop: true, shopId: 'hanamizu', dialogue: ['うちは品揃え最高だよ！'] });
+    MAPS['hana_res'] = createHouse('hana_res', 80, 83, { id: 'researcher', x: 6, y: 4, name: '怪しい研究者', dialogue: ['花粉の異常…これは自然現象じゃない。', 'まるで杉が意思を持って\n花粉を放っているような…', '森の奥に答えがあるはずだ。'], flagSet: { helpNature: false } });
+    MAPS['hana_house1'] = createHouse('hana_house1', 84, 91, null);
+    MAPS['green_shop'] = createHouse('green_shop', 21, 119, { id: 'shop_green', x: 6, y: 4, name: '武器商人', isShop: true, shopId: 'greenline', dialogue: ['良い装備があるよ！'] });
+    MAPS['green_house1'] = createHouse('green_house1', 30, 119, { id: 'ex_member', x: 6, y: 4, name: '元団体員', dialogue: ['森林保全団体にいたんだが…', '最近の杉は異常だ。\n明らかに凶暴化している。', '彼らにも彼らの事情があるんだろうが…'] });
+    MAPS['green_house2'] = createHouse('green_house2', 21, 127, { id: 'refugee', x: 6, y: 4, name: '避難民', dialogue: ['東の花粉廃墟から命からがら逃げてきたんだ…', '私たちは杉の森に手を入れすぎた。その報いなのかもしれない。'] });
+    MAPS['shida_shop'] = createHouse('shida_shop', 81, 169, { id: 'shop_shida', x: 6, y: 4, name: '自然ショップ', isShop: true, shopId: 'shida', dialogue: ['自然の恵みをどうぞ。'] });
+    MAPS['shida_priestess'] = createHouse('shida_priestess', 91, 169, { id: 'priestess', x: 6, y: 4, name: '巫女', dialogue: ['あなた…森の声が聞こえますか？', '杉の巨木は、本来は森の守護者。', '人間が自然を壊し続けた結果、\n杉は怒りを覚えたのです。', '戦うだけが答えではありません…'], flagSet: { listenedToPriestess: true } });
+    MAPS['shida_villager'] = createHouse('shida_villager', 95, 177, { id: 'villager', x: 6, y: 4, name: '村人', dialogue: ['ここは花粉が少ないんだ。', '自然と共存する方法を\n昔から守ってきたからね。'] });
+
+    // 廃墟の屋内施設
+    MAPS['ruins_shelter'] = createHouse('ruins_shelter', 56, 114, { id: 'survivor', x: 6, y: 4, name: '生存者', dialogue: [
+      '（薄暗い避難所の奥に、人影がある…）',
+      '……まだ、外を歩ける人がいたんだな',
+      'ここはもう、ほとんど終わった町だ。',
+      'みんな外に出られなくなって、\nそのまま帰ってこなかった。',
+      '……あんたも、花粉症か？\n（主人公はうなずいた）',
+      'そうか……それは、つらいよな。',
+      '俺もだよ。\n最初は、ただのくしゃみと目のかゆみだけだった。',
+      'でも、年々ひどくなっていって…\nついには外に出ることすらできなくなった。',
+      '……それで、あんたはここに何しに来た？\n（主人公は「杉の巨木を倒すため」と答える）'
+    ], isSurvivorEvent: true });
+    MAPS['ruins_hospital'] = createHouse('ruins_hospital', 55, 122, { id: 'hospital_record', x: 6, y: 5, name: '診察記録', dialogue: ['（ボロボロのカルテだ…）\n『花粉症患者の異常な増加。しかし、これは自然現象ではない…森のバランスが崩れている。』'], isObject: true, inspectEvent: 'ruins_hospital' });
+    MAPS['ruins_hospital'].warps.push({ x: 6, y: 2, target: 'ruins_basement', tx: 6, ty: 7 });
+    MAPS['ruins_hospital'].data[2][6] = 13; // 地下への扉を配置
+    
+    MAPS['ruins_school'] = createHouse('ruins_school', 71, 122, { id: 'school_diary', x: 6, y: 4, name: '手記', dialogue: ['（教室の机に残された日記…）\n『空気が重い。外に出られない。町が変になっている。』'], isObject: true, inspectEvent: 'ruins_school' });
+    MAPS['ruins_shop'] = createHouse('ruins_shop', 70, 114, { id: 'ruins_loot', x: 6, y: 4, name: '商店街の残骸', dialogue: ['（崩れた店の中に、使えそうな物が落ちている…）'], isObject: true, inspectEvent: 'ruins_loot' });
+    MAPS['ruins_basement'] = createHouse('ruins_basement', 6, 2, { id: 'basement_record', x: 6, y: 4, name: '秘密の記録', dialogue: ['（誰かが残した研究データだ…）\n『杉を全て消すのではなく、森のバランスを戻す方法があるはずだ…！』'], isObject: true, inspectEvent: 'ruins_basement' });
+    MAPS['ruins_basement'].warps[0].target = 'ruins_hospital'; // 病院に戻るように書き換え
+  }
+
+  setupMaps();
+
+  const ZONES = [
+    { id: 'suginashi',  x: 10, y: 10, w: 30, h: 20, name: 'スギナシ町', safe: true },
+    { id: 'field1_e',   x: 40, y: 15, w: 45, h: 11, name: 'スギナシ郊外', encounters: ['grass'] },
+    { id: 'field1_s',   x: 75, y: 25, w: 11, h: 50, name: 'スギナシ郊外', encounters: ['grass'] },
+    { id: 'hanamizu',   x: 65, y: 75, w: 30, h: 20, name: 'ハナミズシティ', safe: true },
+    { id: 'field2_w',   x: 25, y: 70, w: 40, h: 11, name: '森林地帯', encounters: ['grass', 'flower'] }, 
+    { id: 'field2_s',   x: 25, y: 80, w: 11, h: 30, name: '森林地帯', encounters: ['grass', 'flower'] }, 
+    { id: 'greenline',  x: 15, y: 110, w: 30, h: 20, name: 'グリーンライン', safe: true },
+    { id: 'ruins',      x: 50, y: 105, w: 30, h: 20, name: '花粉廃墟', safe: true, hazard: 'pollen_fog' },
+    { id: 'field3_1',   x: 30, y: 130, w: 65, h: 11, name: '深い森・洞窟', encounters: ['flower', 'ranger'] },
+    { id: 'field3_2',   x: 85, y: 140, w: 11, h: 20, name: '深い森・洞窟', encounters: ['flower', 'ranger'] },
+    { id: 'shida',      x: 75, y: 160, w: 30, h: 20, name: 'シダの里', safe: true },
+    { id: 'cedar_sea',  x: 50, y: 180, w: 35, h: 11, name: '杉樹海', encounters: ['ranger', 'flower', 'grass'] },
+    { id: 'boss_area',  x: 45, y: 190, w: 20, h: 10, name: 'ボスエリア', boss: true },
+  ];
+
+  let bossEnemy = { type: 'boss_cedar', x: 55, y: 194, alive: true, px: 55 * TILE_SIZE + 16, py: 194 * TILE_SIZE + 16 };
+  let boss1Enemy = { type: 'boss_guardian', x: 80, y: 55, alive: true, px: 80 * TILE_SIZE + 16, py: 55 * TILE_SIZE + 16 };
+  let boss2Enemy = { type: 'boss_birch', x: 88, y: 155, alive: true, px: 88 * TILE_SIZE + 16, py: 155 * TILE_SIZE + 16 };
+  let currentMapId = 'world';
+  let currentZone = null;
+  let encounterSteps = 0;
+  let warpCooldown = 0;
+
+  function getZoneAt(px, py) {
+    if (currentMapId !== 'world') return { name: '屋内', safe: true, id: 'indoor' };
+    const tx = Math.floor(px / TILE_SIZE), ty = Math.floor(py / TILE_SIZE);
+    for (const z of ZONES) if (tx >= z.x && tx < z.x+z.w && ty >= z.y && ty < z.y+z.h) return z;
+    return null;
+  }
+
+  return {
+    TILE_SIZE, ZONES,
+    
+    init() {
+      bossEnemy = { type: 'boss_cedar', x: 55, y: 194, alive: true, px: 55 * TILE_SIZE + 16, py: 194 * TILE_SIZE + 16 };
+      boss1Enemy = { type: 'boss_guardian', x: 80, y: 55, alive: true, px: 80 * TILE_SIZE + 16, py: 55 * TILE_SIZE + 16 };
+      boss2Enemy = { type: 'boss_birch', x: 88, y: 155, alive: true, px: 88 * TILE_SIZE + 16, py: 155 * TILE_SIZE + 16 };
+      currentMapId = 'world';
+      currentZone = null;
+      encounterSteps = 0;
+      warpCooldown = 0;
+    },
+
+    updateZone() {
+      const z = getZoneAt(Player.state.mapX, Player.state.mapY);
+      if (z && (!currentZone || z.id !== currentZone.id)) {
+        currentZone = z;
+        if(z.name !== '屋内') UI.showNotification(z.name, 2000);
+      }
+    },
+    getCurrentZone() { return currentZone; },
+
+    draw(ctx, canvasW, canvasH) {
+      if(warpCooldown > 0) warpCooldown--;
+      const curMap = MAPS[currentMapId];
+      if(!curMap) return;
+
+      const camX = Player.state.mapX - canvasW / 2 + TILE_SIZE / 2;
+      const camY = Player.state.mapY - canvasH / 2 + TILE_SIZE / 2;
+      const startTX = Math.max(0, Math.floor(camX / TILE_SIZE) - 1);
+      const startTY = Math.max(0, Math.floor(camY / TILE_SIZE) - 1);
+      const endTX = Math.min(curMap.w, Math.ceil((camX + canvasW) / TILE_SIZE) + 1);
+      const endTY = Math.min(curMap.h, Math.ceil((camY + canvasH) / TILE_SIZE) + 1);
+
+      for (let y = startTY; y < endTY; y++) {
+        for (let x = startTX; x < endTX; x++) {
+          const tile = curMap.data[y][x];
+          const drawX = x * TILE_SIZE - camX;
+          const drawY = y * TILE_SIZE - camY;
+
+          ctx.fillStyle = TILE_COLORS[tile] || '#000';
+          ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+
+          // Walls
+          if (tile === 1 || tile === 15) { ctx.fillStyle = (tile===1)?'#3a2a1a':'#1f1f26'; ctx.fillRect(drawX + 2, drawY + 2, TILE_SIZE - 4, TILE_SIZE - 4); }
+          // Grass
+          if (tile === 2) {
+            ctx.fillStyle = '#2a5a2a';
+            for (let g = 0; g < 3; g++) { const gx = drawX + 4 + g * 10, gy = drawY + 20; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx+4, gy-12); ctx.lineTo(gx+8, gy); ctx.fill(); }
+          }
+          // Save
+          if (tile === 3) {
+            ctx.fillStyle = '#ffcc33'; ctx.globalAlpha = 0.5 + 0.3 * Math.sin(Date.now() / 500); ctx.beginPath(); ctx.arc(drawX + 16, drawY + 16, 8, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+          }
+          if (tile === 4) { ctx.fillStyle = '#5a1a1a'; ctx.globalAlpha = 0.3 + 0.2 * Math.sin(Date.now() / 800); ctx.fillRect(drawX, drawY, 32, 32); ctx.globalAlpha = 1; }
+          if (tile === 5 || tile === 14) { ctx.fillStyle = (tile===5)?'#35353d':'#3a3a44'; ctx.fillRect(drawX + 1, drawY + 1, 30, 30); }
+          if (tile === 6) { ctx.fillStyle = '#302a22'; ctx.fillRect(drawX, drawY, 32, 32); ctx.fillStyle = '#3a3428'; ctx.fillRect(drawX + 4, drawY + 4, 4, 4); ctx.fillRect(drawX + 20, drawY + 20, 4, 4); }
+          if (tile === 7) { ctx.fillStyle = '#1a3a6a'; ctx.fillRect(drawX, drawY, 32, 32); ctx.fillStyle = '#2a4a7a'; ctx.globalAlpha = 0.5 + 0.3 * Math.sin(Date.now() / 600 + x + y); ctx.fillRect(drawX + 4, drawY + 8, 24, 3); ctx.fillRect(drawX + 8, drawY + 20, 20, 3); ctx.globalAlpha = 1; }
+          if (tile === 8) { ctx.fillStyle = '#ffffff'; ctx.fillRect(drawX + 8, drawY + 8, 4, 4); ctx.fillRect(drawX + 24, drawY + 24, 4, 4); }
+          if (tile === 9) { ctx.fillStyle = '#ffffff'; ctx.fillRect(drawX + 2, drawY + 2, 28, 8); }
+          if (tile === 10) { ctx.fillStyle = '#ffffff'; for (let g=0; g<3; g++) { const gx = drawX + 4 + g * 10, gy = drawY + 20; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx+4, gy-12); ctx.lineTo(gx+8, gy); ctx.fill(); } }
+          if (tile === 12) { ctx.fillStyle = '#3a2a2a'; ctx.fillRect(drawX+2, drawY+2, 28, 28); }
+          if (tile === 13) { ctx.fillStyle = '#3a1e0c'; ctx.fillRect(drawX+4, drawY+4, 24, 28); ctx.fillStyle = '#1a0a00'; ctx.fillRect(drawX+22, drawY+18, 4, 4); }
+        }
+      }
+
+      this.drawNPCs(ctx, camX, camY, canvasW, canvasH, curMap);
+
+      const px = Player.state.mapX - camX, py = Player.state.mapY - camY;
+      const cx = px + 9.6, cy = py + 3.2;
+
+      ctx.fillStyle = '#ffddaa'; ctx.fillRect(cx - 4, cy, 8, 8);
+      ctx.fillStyle = '#664422'; ctx.fillRect(cx - 5, cy - 1, 10, 4);
+      ctx.fillStyle = '#3366cc'; ctx.fillRect(cx - 5, cy + 8, 10, 10); ctx.fillRect(cx - 8, cy + 9, 3, 8); ctx.fillRect(cx + 5, cy + 9, 3, 8);
+      ctx.fillStyle = '#2a2a4a'; ctx.fillRect(cx - 4, cy + 18, 4, 6); ctx.fillRect(cx, cy + 18, 4, 6);
+      ctx.fillStyle = '#885533'; ctx.fillRect(cx - 5, cy + 24, 5, 2); ctx.fillRect(cx, cy + 24, 5, 2);
+
+      if (currentMapId === 'world' && bossEnemy.alive) {
+        const bx = bossEnemy.px - camX, by = bossEnemy.py - camY;
+        if (bx > -64 && bx < canvasW + 64 && by > -64 && by < canvasH + 64) {
+          ctx.fillStyle = '#5a3a1a'; ctx.fillRect(bx - 16, by - 24, 32, 48);
+          ctx.fillStyle = '#2a6a2a'; ctx.beginPath(); ctx.moveTo(bx, by - 40); ctx.lineTo(bx - 24, by - 8); ctx.lineTo(bx + 24, by - 8); ctx.fill();
+        }
+      }
+      // ボス1シンボル（森の番人）
+      if (currentMapId === 'world' && boss1Enemy.alive) {
+        const bx = boss1Enemy.px - camX, by = boss1Enemy.py - camY;
+        if (bx > -64 && bx < canvasW + 64 && by > -64 && by < canvasH + 64) {
+          ctx.fillStyle = '#2a7a3a'; ctx.beginPath(); ctx.arc(bx, by, 16, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#44cc44';
+          for (let i = 0; i < 3; i++) { const a = (i*120-90)*Math.PI/180; ctx.beginPath(); ctx.moveTo(bx+Math.cos(a)*12, by+Math.sin(a)*12-8); ctx.lineTo(bx+Math.cos(a)*12-5, by+Math.sin(a)*12+4); ctx.lineTo(bx+Math.cos(a)*12+5, by+Math.sin(a)*12+4); ctx.fill(); }
+          ctx.fillStyle = '#ffff44'; ctx.beginPath(); ctx.arc(bx-5, by, 3, 0, Math.PI*2); ctx.arc(bx+5, by, 3, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      // ボス2シンボル（白樺）
+      if (currentMapId === 'world' && boss2Enemy.alive) {
+        const bx = boss2Enemy.px - camX, by = boss2Enemy.py - camY;
+        if (bx > -64 && bx < canvasW + 64 && by > -64 && by < canvasH + 64) {
+          ctx.fillStyle = '#e0d8c0'; ctx.fillRect(bx - 8, by - 16, 16, 40);
+          ctx.fillStyle = '#aaccaa'; ctx.beginPath(); ctx.moveTo(bx, by - 32); ctx.lineTo(bx - 18, by - 4); ctx.lineTo(bx + 18, by - 4); ctx.fill();
+          ctx.fillStyle = '#6688aa'; ctx.beginPath(); ctx.arc(bx-3, by+4, 2, 0, Math.PI*2); ctx.arc(bx+3, by+4, 2, 0, Math.PI*2); ctx.fill();
+        }
+      }
+    },
+
+    drawNPCs(ctx, camX, camY, canvasW, canvasH, curMap) {
+      if(!curMap.npcs) return;
+      for (const npc of curMap.npcs) {
+        const nx = npc.x * 32 + 16 - camX, ny = npc.y * 32 + 16 - camY;
+        if (nx < -32 || nx > canvasW + 32 || ny < -32 || ny > canvasH + 32) continue;
+
+        // イベントオブジェクト（看板、扉など）は透明扱いとして描画しない代わりに、常に光のシンボルなどを表示
+        if (npc.isObject) {
+          ctx.fillStyle = '#ffffcc'; ctx.font = '16px "DotGothic16", monospace'; ctx.textAlign = 'center';
+          ctx.globalAlpha = 0.6 + 0.4 * Math.sin(Date.now() / 400 + nx); 
+          ctx.fillText('✨', nx, ny - 4); 
+          ctx.globalAlpha = 1;
+
+          // 近づいた時はさらにアピール（▼）
+          const px = Player.state.mapX + 9.6, py = Player.state.mapY + 9.6;
+          const npcPx = npc.x * 32 + 16, npcPy = npc.y * 32 + 16;
+          if (Math.hypot(px - npcPx, py - npcPy) < 48) {
+            ctx.fillStyle = '#ffcc33'; ctx.font = '12px "DotGothic16", monospace'; ctx.textAlign = 'center';
+            ctx.globalAlpha = 0.5 + 0.3 * Math.sin(Date.now() / 300); ctx.fillText('▼', nx, ny - 24); ctx.globalAlpha = 1;
+          }
+          continue; 
+        }
+
+        const colors = { 'doctor':'#44aa44', 'kid1':'#ffaa33', 'old_man':'#888888', 'shop_sugina':'#cc8833', 'merchant':'#cc8833', 'researcher':'#8844aa', 'salary_man':'#336699', 'shop_green':'#cc8833', 'ex_member':'#557744', 'soldier':'#446644', 'shop_shida':'#cc8833', 'priestess':'#cc4488', 'villager':'#668844', 'kid2':'#ffaa33', 'survivor': '#776655' };
+        const color = colors[npc.id] || '#aaaaaa';
+
+        ctx.fillStyle = color; ctx.fillRect(nx - 5, ny - 8, 10, 16);
+        ctx.fillStyle = '#ffddaa'; ctx.beginPath(); ctx.arc(nx, ny - 14, 6, 0, Math.PI * 2); ctx.fill();
+        if (npc.isShop) { ctx.fillStyle = '#ffcc00'; ctx.font = '10px "DotGothic16", monospace'; ctx.textAlign = 'center'; ctx.fillText('$', nx, ny - 24); }
+
+        const px = Player.state.mapX + 9.6, py = Player.state.mapY + 9.6;
+        const npcPx = npc.x * 32 + 16, npcPy = npc.y * 32 + 16;
+        if (Math.hypot(px - npcPx, py - npcPy) < 64) {
+          ctx.fillStyle = '#ffffff'; ctx.font = '12px "DotGothic16", monospace'; ctx.textAlign = 'center';
+          ctx.globalAlpha = 0.5 + 0.3 * Math.sin(Date.now() / 300); ctx.fillText('💬', nx, ny - 28); ctx.globalAlpha = 1;
+        }
+      }
+    },
+
+    updatePlayerMovement() {
+      let MAP_SPEED = 1.5; 
+      
+      // 花粉の霧ハザードによる移動速度低下
+      if (currentZone && currentZone.hazard === 'pollen_fog') {
+        MAP_SPEED = 1.0;
+        // 防具による軽減判定 (防具があれば速度低下を緩和)
+        /* if (Player.state.armor) { MAP_SPEED = 1.2; } */
+      }
+
+      let nx = Player.state.mapX, ny = Player.state.mapY;
+
+      if (Input.isDown('up')) ny -= MAP_SPEED;
+      if (Input.isDown('down')) ny += MAP_SPEED;
+      if (Input.isDown('left')) nx -= MAP_SPEED;
+      if (Input.isDown('right')) nx += MAP_SPEED;
+
+      const curMap = MAPS[currentMapId];
+      if(!curMap) return false;
+
+      // Warp check
+      if (curMap.warps && warpCooldown <= 0) {
+        const txPlayer = Math.floor((Player.state.mapX + 9.6) / 32), tyPlayer = Math.floor((Player.state.mapY + 9.6) / 32);
+        for (const w of curMap.warps) {
+          if (txPlayer === w.x && tyPlayer === w.y) {
+            // 電源が入っていないと避難所に入れない処理
+            if (w.target === 'ruins_shelter' && !Player.state.flags.powerOn) {
+              if (Input.isJustPressed('up') || Input.isJustPressed('confirm')) {
+                // UI表示はイベント側で行うため、ここでは移動だけブロック
+              }
+              continue; 
+            }
+            
+            // 隠し地下室の解放チェック
+            if (w.target === 'ruins_basement') {
+              if (!(Player.state.flags.readDiaryCount >= 2 && Player.state.flags.learnedForestTruth)) {
+                if (Input.isJustPressed('up') || Input.isJustPressed('confirm')) {
+                  UI.showNotification('固く閉ざされている。もっと町の手がかりを探そう…', 2000);
+                }
+                continue;
+              }
+            }
+
+            currentMapId = w.target;
+            Player.state.mapX = w.tx * 32 + 6;
+            Player.state.mapY = w.ty * 32 + 6;
+            warpCooldown = 30; 
+            document.getElementById('screen-flash').classList.add('active'); 
+            setTimeout(() => document.getElementById('screen-flash').classList.remove('active'), 300);
+            return true;
+          }
+        }
+      }
+
+      const checkTile = (px, py) => {
+        const tx = Math.floor(px / 32), ty = Math.floor(py / 32);
+        if (ty < 0 || ty >= curMap.h || tx < 0 || tx >= curMap.w) return 1;
+        const t = curMap.data[ty][tx];
+        // 1=壁, 4=廃墟記念碑, 7=水, 9=雪壁, 12=洞窟壁, 15=暗い壁
+        return (t===1 || t===4 || t===7 || t===9 || t===12 || t===15) ? 1 : 0;
+      };
+
+      const size = 19.2;
+      if (checkTile(nx, Player.state.mapY) === 0 && checkTile(nx + size, Player.state.mapY + size) === 0) Player.state.mapX = nx;
+      if (checkTile(Player.state.mapX, ny) === 0 && checkTile(Player.state.mapX + size, ny + size) === 0) Player.state.mapY = ny;
+
+      if (nx !== Player.state.mapX || ny !== Player.state.mapY) encounterSteps++;
+      return false;
+    },
+
+    checkEncounter() {
+      if (currentMapId !== 'world' || !currentZone || currentZone.safe || currentZone.boss) return null;
+      if (!currentZone.encounters || currentZone.encounters.length === 0) return null;
+      if (Math.random() < 0.0025) {
+        const enemies = currentZone.encounters;
+        return enemies[Math.floor(Math.random() * enemies.length)];
+      }
+      return null;
+    },
+
+    checkNPCContact() {
+      const curMap = MAPS[currentMapId];
+      if(!curMap || !curMap.npcs) return null;
+      const px = Player.state.mapX + 9.6, py = Player.state.mapY + 9.6;
+      for (const npc of curMap.npcs) {
+        const npcPx = npc.x * 32 + 16, npcPy = npc.y * 32 + 16;
+        if (Math.hypot(px - npcPx, py - npcPy) < 48) return npc;
+      }
+      return null;
+    },
+
+    checkBossContact() {
+      if (currentMapId !== 'world') return null;
+      const px = Player.state.mapX + 9.6, py = Player.state.mapY + 9.6;
+      // ボス1（森の番人）
+      if (boss1Enemy.alive && Math.abs(py - boss1Enemy.py) < 30 && Math.abs(px - boss1Enemy.px) < 400) {
+        return { ...boss1Enemy, bossId: 'boss1' };
+      }
+      // ボス2（白樺）
+      if (boss2Enemy.alive && Math.abs(py - boss2Enemy.py) < 30 && Math.abs(px - boss2Enemy.px) < 400) {
+        return { ...boss2Enemy, bossId: 'boss2' };
+      }
+      // ラスボス
+      if (bossEnemy.alive && Math.abs(py - bossEnemy.py) < 30 && Math.abs(px - bossEnemy.px) < 400) {
+        return { ...bossEnemy, bossId: 'final' };
+      }
+      return null;
+    },
+
+    removeBoss() { bossEnemy.alive = false; },
+
+    checkSavePoint() {
+      const curMap = MAPS[currentMapId];
+      const tx = Math.floor((Player.state.mapX + 9.6) / 32), ty = Math.floor((Player.state.mapY + 9.6) / 32);
+      return curMap && curMap.data[ty] && curMap.data[ty][tx] === 3;
+    },
+
+    removeEnemy(id) {
+      if (id === 'boss') bossEnemy.alive = false;
+      if (id === 'boss1') boss1Enemy.alive = false;
+      if (id === 'boss2') boss2Enemy.alive = false;
+    },
+    getActiveEnemies() {
+      const list = [];
+      if (bossEnemy.alive) list.push(bossEnemy);
+      if (boss1Enemy.alive) list.push(boss1Enemy);
+      if (boss2Enemy.alive) list.push(boss2Enemy);
+      return list;
+    },
+    current() { return { name: currentZone ? currentZone.name : 'ワールド' }; },
+  };
+})();
+
+</script>
+  <script>
+// ===== enemy.js - 敵データ・弾幕パターン =====
+const Enemy = (() => {
+  // 敵タイプ定義
+  const TYPES = {
+    grass: {
+      name: '野草のワカバ',
+      hp: 15,
+      maxHp: 15,
+      attack: 2,
+      exp: 5,
+      gold: 8,
+      color: '#33aa44',
+      bulletPattern: 'aimed_and_radial',
+      description: '森に生い茂る野草。花粉をまき散らす。',
+    },
+    flower: {
+      name: '毒花のスミレ',
+      hp: 25,
+      maxHp: 25,
+      attack: 3,
+      exp: 10,
+      gold: 15,
+      color: '#cc44aa',
+      bulletPattern: 'spiral_aimed',
+      description: '美しいが危険な花。鮮やかな花粉弾幕を放つ。',
+    },
+    ranger: {
+      name: '森林保全員ハヤシ',
+      hp: 35,
+      maxHp: 35,
+      attack: 4,
+      exp: 15,
+      gold: 25,
+      color: '#44aa88',
+      bulletPattern: 'aimed_scatter',
+      description: '森を守る保全団体の一員。正義感が強い。',
+    },
+    boss_cedar: {
+      name: '杉の巨木 スギノオウ',
+      hp: 120,
+      maxHp: 120,
+      attack: 6,
+      exp: 100,
+      gold: 500,
+      color: '#5a3a1a',
+      bulletPattern: 'boss',
+      description: 'この森を支配する巨大な杉の木。\n凄まじい花粉弾幕を放つ。',
+      isBoss: true,
+    },
+    boss_guardian: {
+      name: '森の番人 モリマモル',
+      hp: 45,
+      maxHp: 45,
+      attack: 3,
+      exp: 40,
+      gold: 150,
+      color: '#2a7a3a',
+      bulletPattern: 'boss_guardian',
+      description: '森を守護する精霊。\n森林破壊に怒りを燃やしている。',
+      isBoss: true,
+    },
+    boss_birch: {
+      name: '白樺の守護者 シラカバ',
+      hp: 80,
+      maxHp: 80,
+      attack: 5,
+      exp: 60,
+      gold: 250,
+      color: '#e0d8c0',
+      bulletPattern: 'boss_birch',
+      description: '白い樹皮を持つ美しき守護者。\n杉を守るため立ちはだかる。',
+      isBoss: true,
+    },
+  };
+
+  // 弾幕パターン生成
+  const PATTERNS = {
+    /** 円形拡散弾（遅い）*/
+    radial_slow(cx, cy, timer) {
+      const bullets = [];
+      if (timer % 60 === 0) {
+        for (let i = 0; i < 360; i += 30) {
+          const rad = (i + timer) * Math.PI / 180;
+          bullets.push({
+            x: cx, y: cy,
+            vx: Math.cos(rad) * 1.2,
+            vy: Math.sin(rad) * 1.2,
+            radius: 5,
+            color: '#aaff44',
+          });
+        }
+      }
+      return bullets;
+    },
+
+    /** 円形拡散弾（速い）*/
+    radial_fast(cx, cy, timer) {
+      const bullets = [];
+      if (timer % 40 === 0) {
+        for (let i = 0; i < 360; i += 20) {
+          const rad = (i + timer * 2) * Math.PI / 180;
+          bullets.push({
+            x: cx, y: cy,
+            vx: Math.cos(rad) * 1.8,
+            vy: Math.sin(rad) * 1.8,
+            radius: 4,
+            color: '#ff88cc',
+          });
+        }
+      }
+      return bullets;
+    },
+
+    /** 狙い撃ち＋散弾 */
+    aimed_scatter(cx, cy, timer, targetX, targetY) {
+      const bullets = [];
+      if (timer % 50 === 0) {
+        const dx = targetX - cx;
+        const dy = targetY - cy;
+        const angle = Math.atan2(dy, dx);
+        for (let i = -2; i <= 2; i++) {
+          const a = angle + i * 0.15;
+          bullets.push({
+            x: cx, y: cy,
+            vx: Math.cos(a) * 2.2,
+            vy: Math.sin(a) * 2.2,
+            radius: 5,
+            color: '#44ccaa',
+          });
+        }
+      }
+      return bullets;
+    },
+
+    /** ボスパターン */
+    boss(cx, cy, timer, targetX, targetY, phase, enemyObj, screenW, screenH) {
+      const bullets = [];
+      const w = screenW || 640;
+      const h = screenH || 480;
+      const basePhase = phase !== undefined ? phase : 0;
+      let currentPhase;
+      
+      if (enemyObj && enemyObj.isForm2) {
+        currentPhase = 10 + (basePhase % 3);
+      } else {
+        currentPhase = basePhase % 7;
+      }
+
+      switch (currentPhase) {
+        case 0: // ① 花粉拡散（全方向弾）
+          if (timer % 30 === 0) {
+            const offset = timer * 3;
+            for (let i = 0; i < 360; i += 15) {
+              const rad = (i + offset) * Math.PI / 180;
+              bullets.push({
+                x: cx, y: cy,
+                vx: Math.cos(rad) * 1.5,
+                vy: Math.sin(rad) * 1.5,
+                radius: 4,
+                color: '#ffee44',
+              });
+            }
+          }
+          break;
+
+        case 1: // ② 渦巻き弾
+          if (timer % 5 === 0) {
+            const spiralAngle = timer * 8 * Math.PI / 180;
+            bullets.push({
+              x: cx, y: cy,
+              vx: Math.cos(spiralAngle) * 2,
+              vy: Math.sin(spiralAngle) * 2,
+              radius: 5,
+              color: '#44ff88',
+            });
+            bullets.push({
+              x: cx, y: cy,
+              vx: Math.cos(spiralAngle + Math.PI) * 2,
+              vy: Math.sin(spiralAngle + Math.PI) * 2,
+              radius: 5,
+              color: '#88ff44',
+            });
+          }
+          break;
+
+        case 2: // ③ 粉塵爆発
+          {
+            const subTimer = timer % 300;
+            // 警告表示期間
+            if (subTimer < 120) {
+              if (subTimer % 40 === 0) {
+                const angle = Math.atan2(targetY - cy, targetX - cx);
+                for (let i = -1; i <= 1; i++) {
+                  const a = angle + i * 0.3;
+                  bullets.push({
+                    x: cx, y: cy,
+                    vx: Math.cos(a) * 1.8,
+                    vy: Math.sin(a) * 1.8,
+                    radius: 6,
+                    color: '#ff6644',
+                    statusEffect: 'sneeze'
+                  });
+                }
+              }
+            }
+            // 爆発
+            if (subTimer === 150) {
+              for (let i = 0; i < 360; i += 8) {
+                const rad = i * Math.PI / 180;
+                bullets.push({
+                  x: cx, y: cy,
+                  vx: Math.cos(rad) * 2.5,
+                  vy: Math.sin(rad) * 2.5,
+                  radius: 5,
+                  color: '#ff4422',
+                  statusEffect: 'sneeze'
+                });
+              }
+            }
+          }
+          break;
+
+        case 3: // ④ 木の葉の壁（全画面なぎ払い・安地なし隙間抜け、同時2〜3枚制限）
+          if (timer % 160 === 0) {
+            const isLeft = (Math.floor(timer / 160) % 2) === 0;
+            // 画面幅wを基準とし、画面外端から生成
+            const startX = isLeft ? -50 : w + 50;
+            // 速度を遅く調整
+            const spdX = isLeft ? 1.5 : -1.5;
+            // 隙間の中心Y座標をランダム決定 (画面高さを想定)
+            const gapY = Math.random() * (h - 100) + 50;
+            
+            // 画面上下(-50〜h+50)まで完全にカバーする弾を配置
+            for (let y = -50; y <= h + 50; y += 22) {
+              if (y < gapY - 40 || y > gapY + 40) {
+                 bullets.push({x: startX, y: y, vx: spdX, vy: 0, radius: 8, color: isLeft ? '#33aa44' : '#228833', statusEffect: 'sneeze'});
+              }
+            }
+          }
+          break;
+
+        case 4: // ⑤ 必殺：巨木の怒り（高速自機狙い＋巨大弾）
+          if (timer % 30 === 0) {
+            const dx = targetX - cx;
+            const dy = targetY - cy;
+            const angle = Math.atan2(dy, dx);
+            for (let i = -1; i <= 1; i++) {
+              const a = angle + i * 0.15;
+              bullets.push({
+                x: cx, y: cy,
+                vx: Math.cos(a) * 3.0,
+                vy: Math.sin(a) * 3.0,
+                radius: 5,
+                color: '#ff2222',
+              });
+            }
+          }
+          if (timer % 100 === 0) {
+             const dx = targetX - cx;
+             const dy = targetY - cy;
+             const angle = Math.atan2(dy, dx);
+             bullets.push({
+               x: cx, y: cy,
+               vx: Math.cos(angle) * 1.8,
+               vy: Math.sin(angle) * 1.8,
+               radius: 15,
+               color: '#aa3300',
+               statusEffect: 'sneeze'
+             });
+          }
+          break;
+
+        case 5: // ⑥ 狂気の森（3種の異なる動きの弾幕）
+          // 1. 中心からの渦巻き（遅め、ピンク）
+          if (timer % 8 === 0) {
+            const rad = timer * 13 * Math.PI / 180;
+            bullets.push({x: cx, y: cy, vx: Math.cos(rad) * 1.5, vy: Math.sin(rad) * 1.5, radius: 4, color: '#ff44aa'});
+          }
+          // 2. 上からの雨（ランダムX、下へ固定落下、ブルー）
+          if (timer % 10 === 0) {
+            const rx = Math.random() * w;
+            bullets.push({x: rx, y: -10, vx: 0, vy: 2.5 + Math.random(), radius: 5, color: '#44aaff'});
+          }
+          // 3. 左端から右へ進むサイン波弾（緑）
+          if (timer % 20 === 0) {
+            const sy = cy + Math.sin(timer * 0.1) * 70;
+            bullets.push({x: -10, y: sy, vx: 2.0, vy: Math.cos(timer * 0.1) * 1.5, radius: 6, color: '#44ff44'});
+          }
+          break;
+
+        case 6: // ⑦ 逃避不可避（放射状黄弾＋渦巻き赤弾）
+          // 黄色：放射状に全方向一斉発射
+          if (timer % 60 === 0) {
+            for (let i = 0; i < 360; i += 20) {
+              const rad = (i + timer * 2) * Math.PI / 180;
+              bullets.push({x: cx, y: cy, vx: Math.cos(rad) * 1.2, vy: Math.sin(rad) * 1.2, radius: 4, color: '#ffff44'});
+            }
+          }
+          // 赤：渦巻き状に回転しながら発射
+          if (timer % 8 === 0) {
+            const spiralAngle = timer * 7 * Math.PI / 180;
+            bullets.push({x: cx, y: cy, vx: Math.cos(spiralAngle) * 2.5, vy: Math.sin(spiralAngle) * 2.5, radius: 5, color: '#ff2200'});
+            bullets.push({x: cx, y: cy, vx: Math.cos(spiralAngle + Math.PI) * 2.5, vy: Math.sin(spiralAngle + Math.PI) * 2.5, radius: 5, color: '#ff2200'});
+          }
+          break;
+
+        // --- 第二形態（真・スギノオウ）専用パターン ---
+        case 10: // 狂乱の嵐 (Pattern A) - レーザー3Way＋双方向螺旋
+          if (timer % 12 === 0) {
+            const dx = targetX - cx;
+            const dy = targetY - cy;
+            const angle = Math.atan2(dy, dx);
+            for(let i = -1; i <= 1; i++){
+               const a = angle + i * 0.15;
+               bullets.push({x: cx, y: cy, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, radius: 6, color: '#ff1111'});
+            }
+          }
+          if (timer % 6 === 0) {
+             const rAngle1 = timer * 0.1;
+             const rAngle2 = -timer * 0.1;
+             for(let i = 0; i < 3; i++){
+                 bullets.push({x: cx, y: cy, vx: Math.cos(rAngle1 + Math.PI*2/3*i)*2, vy: Math.sin(rAngle1 + Math.PI*2/3*i)*2, radius: 5, color: '#ff44aa'});
+                 bullets.push({x: cx, y: cy, vx: Math.cos(rAngle2 + Math.PI*2/3*i)*2, vy: Math.sin(rAngle2 + Math.PI*2/3*i)*2, radius: 5, color: '#ffaa44'});
+             }
+          }
+          break;
+
+        case 11: // 圧殺の結界 (Pattern B) - 全方位弾＋自機狙い
+          if (timer % 40 === 0) {
+            for (let i = 0; i < 360; i += 15) {
+              const rad = i * Math.PI / 180;
+              bullets.push({x: cx, y: cy, vx: Math.cos(rad) * 2.0, vy: Math.sin(rad) * 2.0, radius: 5, color: '#ffdd00'});
+            }
+          }
+          if (timer % 40 === 0) {
+            const dx = targetX - cx;
+            const dy = targetY - cy;
+            const angle = Math.atan2(dy, dx);
+            for(let i = -1; i <= 1; i++){
+               const a = angle + i * 0.12;
+               bullets.push({x: cx, y: cy, vx: Math.cos(a) * 3.0, vy: Math.sin(a) * 3.0, radius: 7, color: '#ff5500'});
+            }
+          }
+          break;
+
+        case 12: // 終焉の樹海 (Pattern C) - 横波＋巨大落下弾
+          if (timer % 10 === 0) {
+             const midY = h / 2;
+             const wave1 = midY + Math.sin(timer * 0.05) * (h * 0.55);
+             const wave2 = midY + Math.sin(timer * 0.05 + Math.PI) * (h * 0.55);
+             bullets.push({x: -20, y: wave1, vx: 3, vy: 0, radius: 6, color: '#ff00ff'});
+             bullets.push({x: w + 20, y: wave2, vx: -3, vy: 0, radius: 6, color: '#00ffff'});
+          }
+          if (timer % 60 === 0) {
+            bullets.push({x: Math.random() * w, y: -40, vx: 0, vy: 1.5, radius: 20, color: '#aa0000'});
+          }
+          break;
+      }
+      return bullets;
+    },
+
+    /** 自機狙い＋円形拡散弾の複合 */
+    aimed_and_radial(cx, cy, timer, targetX, targetY) {
+      const bullets = [];
+      // 30フレームごとに自機狙い弾
+      if (timer % 30 === 0) {
+        const dx = targetX - cx;
+        const dy = targetY - cy;
+        const angle = Math.atan2(dy, dx);
+        bullets.push({
+          x: cx, y: cy,
+          vx: Math.cos(angle) * 2.0,
+          vy: Math.sin(angle) * 2.0,
+          radius: 5,
+          color: '#ff4444',
+        });
+      }
+      // 80フレームごとに円形拡散（遅め）
+      if (timer % 80 === 0) {
+        for (let i = 0; i < 360; i += 45) {
+          const rad = (i + timer) * Math.PI / 180;
+          bullets.push({
+            x: cx, y: cy,
+            vx: Math.cos(rad) * 1.5,
+            vy: Math.sin(rad) * 1.5,
+            radius: 4,
+            color: '#33ffaa',
+          });
+        }
+      }
+      return bullets;
+    },
+
+    /** 渦巻き弾＋自機狙いの複合 */
+    spiral_aimed(cx, cy, timer, targetX, targetY) {
+      const bullets = [];
+      // 渦巻き弾
+      if (timer % 6 === 0) {
+        const rad = timer * 10 * Math.PI / 180;
+        bullets.push({
+          x: cx, y: cy,
+          vx: Math.cos(rad) * 1.5,
+          vy: Math.sin(rad) * 1.5,
+          radius: 4,
+          color: '#ff88cc',
+        });
+      }
+      // 45フレームごとに自機狙い3WAY
+      if (timer % 45 === 0) {
+        const dx = targetX - cx;
+        const dy = targetY - cy;
+        const angle = Math.atan2(dy, dx);
+        for (let i = -1; i <= 1; i++) {
+          const a = angle + i * 0.2;
+          bullets.push({
+            x: cx, y: cy,
+            vx: Math.cos(a) * 2.5,
+            vy: Math.sin(a) * 2.5,
+            radius: 5,
+            color: '#ee4422',
+          });
+        }
+      }
+      return bullets;
+    },
+
+    /** ボス1: 森の番人パターン */
+    boss_guardian(cx, cy, timer, targetX, targetY) {
+      const bullets = [];
+      const phase = Math.floor(timer / 300) % 3;
+
+      switch (phase) {
+        case 0: // 渦巻き＋自機狙い
+          if (timer % 12 === 0) {
+            const rad = timer * 7 * Math.PI / 180;
+            bullets.push({ x: cx, y: cy, vx: Math.cos(rad) * 1.5, vy: Math.sin(rad) * 1.5, radius: 5, color: '#44cc44' });
+            bullets.push({ x: cx, y: cy, vx: Math.cos(rad + Math.PI) * 1.5, vy: Math.sin(rad + Math.PI) * 1.5, radius: 5, color: '#88ff44' });
+          }
+          if (timer % 50 === 0) {
+            const angle = Math.atan2(targetY - cy, targetX - cx);
+            for (let i = -1; i <= 1; i++) {
+              const a = angle + i * 0.2;
+              bullets.push({ x: cx, y: cy, vx: Math.cos(a) * 1.8, vy: Math.sin(a) * 1.8, radius: 5, color: '#22aa22' });
+            }
+          }
+          break;
+        case 1: // 葉っぱの嵐（上から降ってくる）
+          if (timer % 16 === 0) {
+            const rx = Math.random() * 400;
+            bullets.push({ x: rx, y: -10, vx: Math.sin(timer * 0.03) * 1.2, vy: 1.6, radius: 6, color: '#33bb33' });
+          }
+          if (timer % 80 === 0) {
+            for (let i = 0; i < 360; i += 30) {
+              const rad = (i + timer * 2) * Math.PI / 180;
+              bullets.push({ x: cx, y: cy, vx: Math.cos(rad) * 1.2, vy: Math.sin(rad) * 1.2, radius: 4, color: '#66dd44' });
+            }
+          }
+          break;
+        case 2: // 大量散弾
+          if (timer % 40 === 0) {
+            const angle = Math.atan2(targetY - cy, targetX - cx);
+            for (let i = -2; i <= 2; i++) {
+              const a = angle + i * 0.15;
+              bullets.push({ x: cx, y: cy, vx: Math.cos(a) * 2.0, vy: Math.sin(a) * 2.0, radius: 4, color: '#44aa44' });
+            }
+          }
+          break;
+      }
+      return bullets;
+    },
+
+    /** ボス2: 白樺パターン */
+    boss_birch(cx, cy, timer, targetX, targetY) {
+      const bullets = [];
+      const phase = Math.floor(timer / 350) % 3;
+
+      switch (phase) {
+        case 0: // 白い放射弾幕
+          if (timer % 45 === 0) {
+            const offset = timer * 3;
+            for (let i = 0; i < 360; i += 20) {
+              const rad = (i + offset) * Math.PI / 180;
+              bullets.push({ x: cx, y: cy, vx: Math.cos(rad) * 1.6, vy: Math.sin(rad) * 1.6, radius: 5, color: '#e0e0e0' });
+            }
+          }
+          if (timer % 25 === 0) {
+            const angle = Math.atan2(targetY - cy, targetX - cx);
+            bullets.push({ x: cx, y: cy, vx: Math.cos(angle) * 2.5, vy: Math.sin(angle) * 2.5, radius: 6, color: '#aabbcc' });
+          }
+          break;
+        case 1: // 二重螺旋 + 落下弾
+          if (timer % 6 === 0) {
+            const rad1 = timer * 0.09;
+            const rad2 = -timer * 0.09;
+            bullets.push({ x: cx, y: cy, vx: Math.cos(rad1) * 2.0, vy: Math.sin(rad1) * 2.0, radius: 5, color: '#ccddee' });
+            bullets.push({ x: cx, y: cy, vx: Math.cos(rad2) * 2.0, vy: Math.sin(rad2) * 2.0, radius: 5, color: '#88aacc' });
+          }
+          if (timer % 40 === 0) {
+            const rx = Math.random() * 400;
+            bullets.push({ x: rx, y: -20, vx: 0, vy: 2.5, radius: 8, color: '#ffffff' });
+          }
+          break;
+        case 2: // 自機狙い散弾 + 全方位
+          if (timer % 20 === 0) {
+            const angle = Math.atan2(targetY - cy, targetX - cx);
+            for (let i = -2; i <= 2; i++) {
+              const a = angle + i * 0.15;
+              bullets.push({ x: cx, y: cy, vx: Math.cos(a) * 2.8, vy: Math.sin(a) * 2.8, radius: 5, color: '#ddddff' });
+            }
+          }
+          if (timer % 60 === 0) {
+            for (let i = 0; i < 360; i += 25) {
+              const rad = i * Math.PI / 180;
+              bullets.push({ x: cx, y: cy, vx: Math.cos(rad) * 1.3, vy: Math.sin(rad) * 1.3, radius: 4, color: '#bbccdd' });
+            }
+          }
+          break;
+      }
+      return bullets;
+    },
+  };
+
+  return {
+    TYPES,
+    PATTERNS,
+
+    /** 敵インスタンス生成 */
+    create(type) {
+      const def = TYPES[type];
+      if (!def) return null;
+      return {
+        type,
+        name: def.name,
+        hp: def.hp,
+        maxHp: def.maxHp,
+        attack: def.attack,
+        exp: def.exp,
+        gold: def.gold,
+        color: def.color,
+        bulletPattern: def.bulletPattern,
+        description: def.description,
+        isBoss: !!def.isBoss,
+      };
+    },
+
+    /** 弾幕生成 */
+    spawnBullets(patternName, cx, cy, timer, targetX, targetY, phase, enemyObj, w, h) {
+      const pattern = PATTERNS[patternName];
+      if (!pattern) return [];
+      return pattern(cx, cy, timer, targetX, targetY, phase, enemyObj, w, h);
+    },
+
+    /** 敵のCanvas描画 */
+    drawEnemy(ctx, enemy, w, h) {
+      const cx = w / 2;
+      const cy = h / 2;
+
+      if (enemy.type === 'boss_cedar') {
+        const isForm2 = enemy.isForm2;
+        // 幹
+        ctx.fillStyle = isForm2 ? '#3a1a0a' : '#5a3a1a';
+        ctx.fillRect(cx - 15, cy - 10, 30, 60);
+        // 葉
+        ctx.fillStyle = isForm2 ? '#882222' : '#2a6a2a';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 60);
+        ctx.lineTo(cx - 45, cy + 5);
+        ctx.lineTo(cx + 45, cy + 5);
+        ctx.fill();
+        ctx.fillStyle = isForm2 ? '#aa3333' : '#3a7a3a';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 45);
+        ctx.lineTo(cx - 35, cy + 5);
+        ctx.lineTo(cx + 35, cy + 5);
+        ctx.fill();
+        // 目
+        ctx.fillStyle = isForm2 ? '#ffff00' : '#ff3333';
+        ctx.beginPath();
+        ctx.arc(cx - 8, cy + 10, 4, 0, Math.PI * 2);
+        ctx.arc(cx + 8, cy + 10, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (enemy.type === 'flower') {
+        // 花びら
+        ctx.fillStyle = enemy.color;
+        for (let i = 0; i < 6; i++) {
+          const angle = (i * 60 + Date.now() / 50) * Math.PI / 180;
+          const px = cx + Math.cos(angle) * 20;
+          const py = cy + Math.sin(angle) * 20;
+          ctx.beginPath();
+          ctx.arc(px, py, 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#ffee44';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+        ctx.fill();
+        // 目
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(cx - 4, cy - 2, 2, 0, Math.PI * 2);
+        ctx.arc(cx + 4, cy - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (enemy.type === 'ranger') {
+        // 体
+        ctx.fillStyle = '#44aa88';
+        ctx.fillRect(cx - 12, cy - 10, 24, 40);
+        // 頭
+        ctx.fillStyle = '#ddbb88';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 20, 14, 0, Math.PI * 2);
+        ctx.fill();
+        // 帽子
+        ctx.fillStyle = '#336633';
+        ctx.fillRect(cx - 16, cy - 34, 32, 8);
+        ctx.fillRect(cx - 10, cy - 40, 20, 10);
+        // 目
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(cx - 5, cy - 22, 2, 0, Math.PI * 2);
+        ctx.arc(cx + 5, cy - 22, 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (enemy.type === 'boss_guardian') {
+        // 森の番人 — 緑の精霊風
+        // 体（苔むした岩のような体）
+        ctx.fillStyle = '#2a7a3a';
+        ctx.beginPath();
+        ctx.arc(cx, cy + 5, 30, 0, Math.PI * 2);
+        ctx.fill();
+        // 葉の冠
+        ctx.fillStyle = '#44cc44';
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * 72 - 90) * Math.PI / 180;
+          const lx = cx + Math.cos(angle) * 25;
+          const ly = cy - 20 + Math.sin(angle) * 15;
+          ctx.beginPath();
+          ctx.moveTo(lx, ly - 12);
+          ctx.lineTo(lx - 8, ly + 4);
+          ctx.lineTo(lx + 8, ly + 4);
+          ctx.fill();
+        }
+        // 目
+        ctx.fillStyle = '#ffff44';
+        ctx.beginPath();
+        ctx.arc(cx - 10, cy, 5, 0, Math.PI * 2);
+        ctx.arc(cx + 10, cy, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(cx - 10, cy, 2, 0, Math.PI * 2);
+        ctx.arc(cx + 10, cy, 2, 0, Math.PI * 2);
+        ctx.fill();
+        // 腕（ツタ）
+        ctx.strokeStyle = '#3a8a3a';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - 30, cy + 5);
+        ctx.quadraticCurveTo(cx - 50, cy - 10, cx - 40, cy + 30);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + 30, cy + 5);
+        ctx.quadraticCurveTo(cx + 50, cy - 10, cx + 40, cy + 30);
+        ctx.stroke();
+      } else if (enemy.type === 'boss_birch') {
+        // 白樺の守護者 — 白い樹皮
+        // 幹
+        ctx.fillStyle = '#e0d8c0';
+        ctx.fillRect(cx - 12, cy - 10, 24, 55);
+        // 樹皮の模様
+        ctx.fillStyle = '#222';
+        ctx.fillRect(cx - 8, cy - 5, 6, 3);
+        ctx.fillRect(cx + 3, cy + 10, 5, 2);
+        ctx.fillRect(cx - 6, cy + 25, 7, 2);
+        // 葉（白銀色）
+        ctx.fillStyle = '#aaccaa';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 55);
+        ctx.lineTo(cx - 40, cy);
+        ctx.lineTo(cx + 40, cy);
+        ctx.fill();
+        ctx.fillStyle = '#ccddcc';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 40);
+        ctx.lineTo(cx - 30, cy);
+        ctx.lineTo(cx + 30, cy);
+        ctx.fill();
+        // 目
+        ctx.fillStyle = '#6688aa';
+        ctx.beginPath();
+        ctx.arc(cx - 6, cy + 8, 3, 0, Math.PI * 2);
+        ctx.arc(cx + 6, cy + 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // 草
+        ctx.fillStyle = enemy.color;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 30);
+        ctx.lineTo(cx - 20, cy + 20);
+        ctx.lineTo(cx + 20, cy + 20);
+        ctx.fill();
+        ctx.fillStyle = '#44cc55';
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy - 15);
+        ctx.lineTo(cx - 25, cy + 10);
+        ctx.lineTo(cx + 5, cy + 10);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + 10, cy - 15);
+        ctx.lineTo(cx - 5, cy + 10);
+        ctx.lineTo(cx + 25, cy + 10);
+        ctx.fill();
+        // 目
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(cx - 5, cy, 2, 0, Math.PI * 2);
+        ctx.arc(cx + 5, cy, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+  };
+})();
+
+</script>
+  <script>
+// ===== battle.js - 戦闘システム =====
+const Battle = (() => {
+  let currentEnemy = null;
+  let enemySymbol = null; // マップ上の敵シンボル参照
+  let bullets = [];
+  let bulletTimer = 0;
+  let phase = 'command'; // command, attack_anim, bullet, result
+  let selectedCmd = 0;
+  let textQueue = [];
+  let textIndex = 0;
+  let textCharIndex = 0;
+  let textTimer = 0;
+  let attackAnimTimer = 0;
+  let resultTimer = 0;
+  let bulletPhaseTimer = 0;
+  let bulletPhaseDuration = 0;
+  let isActive = false;
+  let shakeTimer = 0;
+
+  const COMMANDS = ['fight', 'talk', 'item', 'flee'];
+  const BULLET_DURATION_NORMAL = 300; // 5秒 (60fps)
+  const BULLET_DURATION_BOSS = 960; // 16秒
+
+  /** テキスト表示 */
+  function showText(texts, callback) {
+    textQueue = Array.isArray(texts) ? texts : [texts];
+    textIndex = 0;
+    textCharIndex = 0;
+    textTimer = 0;
+    phase = 'text';
+    textCallback = callback;
+  }
+
+  let textCallback = null;
+
+  /** テキスト更新 */
+  function updateText() {
+    const current = textQueue[textIndex];
+    if (!current) return;
+
+    textTimer++;
+    if (textCharIndex < current.length) {
+      if (textTimer % 2 === 0) textCharIndex++;
+    }
+
+    if (Input.isJustPressed('confirm') && textCharIndex >= current.length) {
+      textIndex++;
+      textCharIndex = 0;
+      textTimer = 0;
+      if (textIndex >= textQueue.length) {
+        const cb = textCallback;
+        textCallback = null;
+        if (cb) cb();
+      }
+    }
+
+    // テキストをスキップ
+    if (Input.isJustPressed('confirm') && textCharIndex < current.length) {
+      textCharIndex = current.length;
+    }
+
+    const el = document.getElementById('battle-text');
+    if (el && textQueue[textIndex]) {
+      el.textContent = textQueue[textIndex].substring(0, textCharIndex);
+    }
+  }
+
+  /** コマンド選択更新 */
+  function updateCommand() {
+    if (Input.isJustPressed('left')) selectedCmd = Math.max(0, selectedCmd - 1);
+    if (Input.isJustPressed('right')) selectedCmd = Math.min(COMMANDS.length - 1, selectedCmd + 1);
+
+    // ボタンハイライト更新
+    document.querySelectorAll('.battle-cmd').forEach((btn, i) => {
+      btn.classList.toggle('selected', i === selectedCmd);
+    });
+
+    if (Input.isJustPressed('confirm')) {
+      executeCommand(COMMANDS[selectedCmd]);
+    }
+  }
+
+  /** コマンド実行 */
+  function executeCommand(cmd) {
+    switch (cmd) {
+      case 'fight':
+        phase = 'attack_anim';
+        attackAnimTimer = 0;
+        break;
+
+      case 'talk':
+        if (currentEnemy.isBoss && typeof GameEvent !== 'undefined') {
+          const canPeace = GameEvent.getTempCanPeace();
+          if (canPeace) {
+            // 和解成功
+            showText([
+              '「…お前は戦わないのか？」',
+              '「…分かった。話を聞こう。」',
+              '（和解に成功した！）',
+            ], () => {
+              GameEvent.onBossBattleEnd('peace');
+              const gold = currentEnemy.gold || 0;
+              if (gold > 0) Player.gainGold(gold);
+              Player.gainExp(currentEnemy.exp);
+              endBattle(true);
+            });
+          } else {
+            showText(['…話が通じない！'], () => {
+              startBulletPhase();
+            });
+          }
+        } else {
+          showText([currentEnemy.description || '…'], () => {
+            startBulletPhase();
+          });
+        }
+        break;
+
+      case 'item':
+        if (Player.state.inventory.length === 0) {
+          showText(['アイテムを持っていない！'], () => {
+            startBulletPhase();
+          });
+        } else {
+          // 簡易的に一番上の回復アイテムを使用する（UI実装簡略化のため）
+          // 理想はアイテムリスト表示だが、今回は自動で回復アイテムを探して使用
+          const itemUse = Player.state.inventory.find(i => {
+            const def = Items.getItem(i.id);
+            return def && (def.type === 'heal' || def.type === 'heal_cure' || def.type === 'cure');
+          });
+
+          if (itemUse) {
+            const def = Items.getItem(itemUse.id);
+            Items.useItemEffect(itemUse.id);
+            Player.useItem(itemUse.id);
+            UI.updateBattleHP();
+            showText([`${def.name} を使った！\n${def.desc}`], () => {
+              startBulletPhase();
+            });
+          } else {
+            showText(['使えるアイテムがない！'], () => {
+              startBulletPhase();
+            });
+          }
+        }
+        break;
+
+      case 'flee':
+        if (currentEnemy.isBoss) {
+          showText(['…逃げられない！'], () => {
+            startBulletPhase();
+          });
+        } else {
+          showText(['逃げ出した！'], () => {
+            endBattle(false);
+          });
+        }
+        break;
+    }
+  }
+
+  /** 攻撃アニメーション */
+  function updateAttackAnim() {
+    attackAnimTimer++;
+    // フラッシュエフェクト
+    if (attackAnimTimer === 10) {
+      document.getElementById('screen-flash').classList.add('active');
+      setTimeout(() => document.getElementById('screen-flash').classList.remove('active'), 300);
+    }
+
+    if (attackAnimTimer >= 30) {
+      // ダメージ計算（装備込み攻撃力）
+      const damage = Player.getAttack() + Math.floor(Math.random() * 3);
+      currentEnemy.hp = Math.max(0, currentEnemy.hp - damage);
+      UI.updateEnemyHP(currentEnemy);
+      shakeTimer = 15;
+
+      if (currentEnemy.hp <= 0) {
+        if (currentEnemy.type === 'boss_cedar' && !currentEnemy.isForm2) {
+          currentEnemy.hp = currentEnemy.maxHp;
+          currentEnemy.isForm2 = true;
+          currentEnemy.name = '真・スギノオウ';
+          currentEnemy.attack += 2;
+          currentEnemy.turnCount = 0;
+          UI.updateEnemyHP(currentEnemy);
+          document.getElementById('enemy-name').textContent = currentEnemy.name;
+          showText(['スギノオウの様子が変わった…！', '真の恐ろしさが姿を現す！！'], () => {
+            const ec = document.getElementById('enemy-canvas');
+            const ectx = ec.getContext('2d');
+            ectx.clearRect(0, 0, ec.width, ec.height);
+            Enemy.drawEnemy(ectx, currentEnemy, ec.width, ec.height);
+            startBulletPhase();
+          });
+          return;
+        }
+
+        // killCount加算
+        if (Player.state.flags) Player.state.flags.killCount++;
+
+        // ボス撃破時のイベントフラグ更新
+        if (currentEnemy.isBoss && typeof GameEvent !== 'undefined' && GameEvent.getCurrentBossEventId()) {
+          GameEvent.onBossBattleEnd('kill');
+        }
+
+        // ゴールド獲得
+        const gold = currentEnemy.gold || 0;
+        if (gold > 0) Player.gainGold(gold);
+
+        // 勝利
+        const rewardText = gold > 0
+          ? `${currentEnemy.name} を倒した！\nEXP ${currentEnemy.exp}  G ${gold} を獲得！`
+          : `${currentEnemy.name} を倒した！\nEXP ${currentEnemy.exp} を獲得！`;
+        showText([rewardText], () => {
+          const leveled = Player.gainExp(currentEnemy.exp);
+          if (leveled) {
+            showText([`レベルアップ！ LV ${Player.state.level}\nHP +5  攻撃力 +2`], () => {
+              endBattle(true);
+            });
+          } else {
+            endBattle(true);
+          }
+        });
+      } else {
+        showText([`${damage} のダメージ！`], () => {
+          startBulletPhase();
+        });
+      }
+    }
+  }
+
+  /** 弾幕フェーズ開始 */
+  function startBulletPhase() {
+    phase = 'bullet';
+    bullets = [];
+    bulletTimer = 0;
+    bulletPhaseDuration = currentEnemy.isBoss ? BULLET_DURATION_BOSS : BULLET_DURATION_NORMAL;
+    if (currentEnemy.isBoss) {
+      currentEnemy.turnCount = (currentEnemy.turnCount || 0) + 1;
+    }
+
+    const container = document.getElementById('bullet-area-container');
+    const canvas = document.getElementById('bullet-canvas');
+    container.classList.add('active');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+
+    // ハート初期位置（中央下）
+    Player.state.heartX = canvas.width / 2;
+    Player.state.heartY = canvas.height * 0.75;
+
+    // コマンド非表示
+    document.getElementById('battle-commands').style.visibility = 'hidden';
+    document.getElementById('battle-text').textContent = '弾幕をよけろ！';
+  }
+
+  /** 弾幕フェーズ更新 */
+  function updateBulletPhase() {
+    const canvas = document.getElementById('bullet-canvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // プレイヤーハート移動
+    Player.updateHeart({ left: 0, right: w, top: 0, bottom: h });
+
+    // 弾幕生成の中心点を少しずつ動かす（単調な安地防止）
+    let cx = w / 2 + Math.sin(bulletTimer * 0.02) * 50;
+    let cy = h * 0.25 + Math.cos(bulletTimer * 0.015) * 30;
+    
+    const bossPhase = currentEnemy.isBoss ? (currentEnemy.turnCount - 1) : undefined;
+    const newBullets = Enemy.spawnBullets(
+      currentEnemy.bulletPattern,
+      cx, cy, bulletTimer,
+      Player.state.heartX, Player.state.heartY,
+      bossPhase,
+      currentEnemy,
+      w, h
+    );
+    bullets.push(...newBullets);
+
+    // 弾丸更新
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      b.x += b.vx;
+      b.y += b.vy;
+
+      // 画面外削除（画面外からの出現を許容するためバッファを100に拡大）
+      if (b.x < -100 || b.x > w + 100 || b.y < -100 || b.y > h + 100) {
+        bullets.splice(i, 1);
+        continue;
+      }
+
+      // 当たり判定
+      const dx = Player.state.heartX - b.x;
+      const dy = Player.state.heartY - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < Player.HEART_SIZE + b.radius - 2) {
+        if (Player.takeDamage(currentEnemy.attack)) {
+          // 状態異常の付与判定
+          if (b.statusEffect && Player.state.statusEffects && !Player.state.statusEffects.includes(b.statusEffect)) {
+            if (Math.random() < 0.3) { // 30%の確率で付与
+              Player.state.statusEffects.push(b.statusEffect);
+              UI.showNotification('「くしゃみ」状態になった！', 2000);
+            }
+          }
+
+          UI.updateBattleHP();
+          shakeTimer = 10;
+          if (Player.state.hp <= 0) {
+            phase = 'gameover';
+            return;
+          }
+        }
+      }
+    }
+
+    // 描画
+    ctx.clearRect(0, 0, w, h);
+
+    // 弾丸描画
+    for (const b of bullets) {
+      ctx.fillStyle = b.color || '#ffee44';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // グロー効果
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // ハート描画
+    Player.drawHeart(ctx);
+
+    // タイマー表示
+    const remaining = Math.ceil((bulletPhaseDuration - bulletTimer) / 60);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '12px "DotGothic16", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${remaining}s`, w - 8, 16);
+
+    // HP表示とバー
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px "DotGothic16", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`HP ${Player.state.hp} / ${Player.state.maxHp}`, 8, h - 20);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(8, h - 14, 100, 6);
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(8, h - 14, Math.max(0, 100 * Player.hpRatio()), 6);
+
+    bulletTimer++;
+
+    // フェーズ終了
+    if (bulletTimer >= bulletPhaseDuration) {
+      endBulletPhase();
+    }
+  }
+
+  /** 弾幕フェーズ終了 */
+  function endBulletPhase() {
+    phase = 'command';
+    bullets = [];
+    document.getElementById('bullet-area-container').classList.remove('active');
+    document.getElementById('battle-commands').style.visibility = 'visible';
+    document.getElementById('battle-text').textContent = 'どうする？';
+    selectedCmd = 0;
+    document.querySelectorAll('.battle-cmd').forEach((btn, i) => {
+      btn.classList.toggle('selected', i === 0);
+    });
+  }
+
+  /** 戦闘終了 */
+  function endBattle(victory) {
+    isActive = false;
+    Main.switchScreen('game');
+    document.getElementById('bullet-area-container').classList.remove('active');
+    document.getElementById('battle-commands').style.visibility = 'visible';
+
+    if (victory && enemySymbol) {
+      GameMap.removeEnemy(enemySymbol.id);
+    }
+    enemySymbol = null;
+    currentEnemy = null;
+    UI.updateStatus();
+  }
+
+  return {
+    /** 戦闘開始 */
+    start(enemyType, mapEnemy) {
+      currentEnemy = Enemy.create(enemyType);
+      enemySymbol = mapEnemy || null;
+      if (!currentEnemy) return;
+
+      isActive = true;
+      phase = 'text';
+      bullets = [];
+      bulletTimer = 0;
+      selectedCmd = 0;
+      shakeTimer = 0;
+
+      // 画面切り替え
+      document.getElementById('game-screen').classList.remove('active');
+      document.getElementById('battle-screen').classList.add('active');
+
+      // 敵描画
+      const ec = document.getElementById('enemy-canvas');
+      const ectx = ec.getContext('2d');
+      ectx.clearRect(0, 0, ec.width, ec.height);
+      Enemy.drawEnemy(ectx, currentEnemy, ec.width, ec.height);
+      document.getElementById('enemy-name').textContent = currentEnemy.name;
+      UI.updateEnemyHP(currentEnemy);
+      UI.updateBattleHP();
+
+      // コマンドボタン初期化
+      document.querySelectorAll('.battle-cmd').forEach((btn, i) => {
+        btn.classList.toggle('selected', i === 0);
+      });
+
+      // 開始テキスト
+      showText([`${currentEnemy.name} が現れた！`, currentEnemy.description], () => {
+        phase = 'command';
+        document.getElementById('battle-text').textContent = 'どうする？';
+      });
+    },
+
+    /** 更新 */
+    update() {
+      if (!isActive) return;
+
+      // シェイク
+      const container = document.getElementById('battle-container');
+      if (shakeTimer > 0) {
+        shakeTimer--;
+        container.style.transform = `translateX(${(Math.random() - 0.5) * 6}px)`;
+      } else {
+        container.style.transform = '';
+      }
+
+      switch (phase) {
+        case 'text': updateText(); break;
+        case 'command': updateCommand(); break;
+        case 'attack_anim': updateAttackAnim(); break;
+        case 'bullet': updateBulletPhase(); break;
+        case 'gameover':
+          document.getElementById('battle-text').textContent = 'やられてしまった…';
+          if (Input.isJustPressed('confirm')) {
+            endBattle(false);
+            Player.init();
+            GameMap.init();
+            Main.switchScreen('title');
+          }
+          break;
+      }
+    },
+
+    isActive() { return isActive; },
+    /** フェーズ取得 */
+    getPhase() { return phase; },
+
+    /** 敵取得 */
+    getCurrentEnemy() { return currentEnemy; },
+
+    /** 初期化 (イベントリスナー登録) */
+    initListeners() {
+      const battleTextbox = document.getElementById('battle-textbox');
+      if (battleTextbox) {
+        battleTextbox.addEventListener('click', () => {
+          if (isActive && phase === 'text') {
+            Input.triggerConfirm();
+          }
+        });
+      }
+
+      document.querySelectorAll('.battle-cmd').forEach((btn, i) => {
+        btn.addEventListener('click', () => {
+          if (isActive && phase === 'command') {
+            selectedCmd = i;
+            Input.triggerConfirm();
+          }
+        });
+      });
+    }
+  };
+})();
+
+// リスナー初期化
+Battle.initListeners();
+
+</script>
+  <script>
+// ===== ui.js - UI管理 =====
+const UI = (() => {
+  let menuOpen = false;
+  let menuMode = 'base'; // 'base', 'status', 'items', 'item_action'
+  let menuSelectedIndex = 0;
+  let itemSelectedIndex = 0;
+  let itemActionIndex = 0; // 0=使用・装備, 1=やめる
+  const MENU_OPTIONS = ['status', 'items', 'save', 'load', 'close'];
+
+  return {
+    /** ステータスバー更新 */
+    updateStatus() {
+      const s = Player.state;
+      document.getElementById('status-level').textContent = s.level;
+      const elGold = document.getElementById('status-gold');
+      if (elGold) elGold.textContent = s.gold;
+      
+      document.getElementById('status-hp').textContent = `${s.hp}/${s.maxHp}`;
+      document.getElementById('status-exp').textContent = s.exp;
+
+      const ratio = Player.hpRatio();
+      const hpBar = document.getElementById('hp-bar');
+      hpBar.style.width = (ratio * 100) + '%';
+      if (ratio > 0.5) hpBar.style.background = 'var(--hp-green)';
+      else if (ratio > 0.25) hpBar.style.background = 'var(--hp-yellow)';
+      else hpBar.style.background = 'var(--hp-red)';
+    },
+
+    /** 戦闘HP更新 */
+    updateBattleHP() {
+      const s = Player.state;
+      document.getElementById('battle-level').textContent = s.level;
+      document.getElementById('battle-hp').textContent = `${s.hp}/${s.maxHp}`;
+
+      const ratio = Player.hpRatio();
+      const hpBar = document.getElementById('battle-hp-bar');
+      hpBar.style.width = (ratio * 100) + '%';
+      if (ratio > 0.5) hpBar.style.background = 'var(--hp-green)';
+      else if (ratio > 0.25) hpBar.style.background = 'var(--hp-yellow)';
+      else hpBar.style.background = 'var(--hp-red)';
+    },
+
+    /** 敵HP更新 */
+    updateEnemyHP(enemy) {
+      const ratio = enemy.hp / enemy.maxHp;
+      const bar = document.getElementById('enemy-hp-bar');
+      bar.style.width = (ratio * 100) + '%';
+      if (ratio > 0.5) bar.style.background = 'var(--hp-green)';
+      else if (ratio > 0.25) bar.style.background = 'var(--hp-yellow)';
+      else bar.style.background = 'var(--hp-red)';
+    },
+
+    /** 通知表示 */
+    showNotification(text, duration) {
+      const el = document.getElementById('notification');
+      el.textContent = text;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), duration || 2000);
+    },
+
+    /** メニュー開閉 */
+    toggleMenu() {
+      menuOpen = !menuOpen;
+      const screen = document.getElementById('menu-screen');
+      if (menuOpen) {
+        screen.classList.add('active');
+        menuMode = 'base';
+        menuSelectedIndex = 0;
+        this.updateMenuSelection();
+        this.updateMenuDetail();
+      } else {
+        screen.classList.remove('active');
+      }
+    },
+
+    isMenuOpen() { return menuOpen; },
+
+    /** メニュー更新 */
+    updateMenu() {
+      if (!menuOpen) return;
+
+      if (menuMode === 'base') {
+        if (Input.isJustPressed('up')) {
+          menuSelectedIndex = Math.max(0, menuSelectedIndex - 1);
+          this.updateMenuSelection();
+          this.updateMenuDetail();
+        }
+        if (Input.isJustPressed('down')) {
+          menuSelectedIndex = Math.min(MENU_OPTIONS.length - 1, menuSelectedIndex + 1);
+          this.updateMenuSelection();
+          this.updateMenuDetail();
+        }
+
+        if (Input.isJustPressed('confirm')) {
+          const action = MENU_OPTIONS[menuSelectedIndex];
+          switch (action) {
+            case 'status':
+              menuMode = 'status';
+              this.updateMenuDetail();
+              break;
+            case 'items':
+              if (Player.state.inventory.length > 0) {
+                menuMode = 'items';
+                itemSelectedIndex = 0;
+                this.updateMenuDetail();
+              } else {
+                this.showNotification('アイテムがありません');
+              }
+              break;
+            case 'save':
+              Save.save();
+              this.showNotification('セーブしました！');
+              break;
+            case 'load':
+              if (Save.load()) {
+                this.showNotification('ロードしました！');
+                this.toggleMenu();
+                GameMap.init();
+                UI.updateStatus();
+              } else {
+                this.showNotification('セーブデータがありません');
+              }
+              break;
+            case 'close':
+              this.toggleMenu();
+              break;
+          }
+        }
+
+        if (Input.isJustPressed('cancel') || Input.isJustPressed('menu')) {
+          this.toggleMenu();
+        }
+
+      } else if (menuMode === 'status') {
+        if (Input.isJustPressed('cancel')) {
+          menuMode = 'base';
+          this.updateMenuDetail();
+        }
+      } else if (menuMode === 'items') {
+        if (Input.isJustPressed('up')) {
+          itemSelectedIndex = Math.max(0, itemSelectedIndex - 1);
+          this.updateMenuDetail();
+        }
+        if (Input.isJustPressed('down')) {
+          itemSelectedIndex = Math.min(Player.state.inventory.length - 1, itemSelectedIndex + 1);
+          this.updateMenuDetail();
+        }
+        if (Input.isJustPressed('confirm')) {
+          menuMode = 'item_action';
+          itemActionIndex = 0;
+          this.updateMenuDetail();
+        }
+        if (Input.isJustPressed('cancel')) {
+          menuMode = 'base';
+          this.updateMenuDetail();
+        }
+      } else if (menuMode === 'item_action') {
+        if (Input.isJustPressed('up') || Input.isJustPressed('down')) {
+          itemActionIndex = itemActionIndex === 0 ? 1 : 0;
+          this.updateMenuDetail();
+        }
+        if (Input.isJustPressed('confirm')) {
+          if (itemActionIndex === 0) {
+            const inv = Player.state.inventory[itemSelectedIndex];
+            const itemDef = typeof Items !== 'undefined' ? Items.getAnyItem(inv.id) : null;
+            if (itemDef) {
+              if (itemDef.attack !== undefined || itemDef.type === 'weapon') {
+                Player.state.weapon = inv.id;
+                this.showNotification(itemDef.name + 'を装備した！');
+              } else if (itemDef.defense !== undefined || itemDef.type === 'armor') {
+                Player.state.armor = inv.id;
+                this.showNotification(itemDef.name + 'を装備した！');
+              } else if (itemDef.type === 'key') {
+                this.showNotification('ここでは使えない。');
+              } else {
+                if (typeof Items !== 'undefined' && Items.useItemEffect(inv.id)) {
+                  Player.useItem(inv.id);
+                  this.showNotification(itemDef.name + 'を使った！');
+                  if (Player.state.inventory.length === 0) {
+                    menuMode = 'base';
+                  } else if (itemSelectedIndex >= Player.state.inventory.length) {
+                    itemSelectedIndex--;
+                  }
+                } else {
+                  this.showNotification('今は使う必要がない。');
+                }
+              }
+            }
+          }
+          if (menuMode === 'item_action') {
+            menuMode = 'items';
+            this.updateMenuDetail();
+          }
+        }
+        if (Input.isJustPressed('cancel')) {
+          menuMode = 'items';
+          this.updateMenuDetail();
+        }
+      }
+    },
+
+    updateMenuSelection() {
+      document.querySelectorAll('.menu-option').forEach((opt, i) => {
+        opt.classList.toggle('selected', i === menuSelectedIndex);
+      });
+      // 左側メニューはbaseモード以外で少し暗くする
+      const ops = document.querySelector('.menu-options');
+      if (ops) ops.style.opacity = (menuMode === 'base') ? '1' : '0.5';
+    },
+
+    updateMenuDetail() {
+      const detail = document.getElementById('menu-detail');
+      if (!detail) return;
+      const s = Player.state;
+      const map = GameMap.current();
+
+      if (menuMode === 'base') {
+        switch (MENU_OPTIONS[menuSelectedIndex]) {
+          case 'status': detail.innerHTML = '<div>Z / Enterキーでステータス詳細を確認します</div>'; break;
+          case 'items': detail.innerHTML = '<div>Z / Enterキーでもちものを確認・使用・装備します</div>'; break;
+          case 'save': detail.innerHTML = '<div>Z / Enterキーでセーブします</div>'; break;
+          case 'load': detail.innerHTML = '<div>Z / Enterキーでロードします</div>'; break;
+          case 'close': detail.innerHTML = '<div>メニューを閉じます</div>'; break;
+        }
+
+      } else if (menuMode === 'status') {
+        const wName = s.weapon && typeof Items !== 'undefined' ? Items.getWeapon(s.weapon)?.name || Items.getAnyItem(s.weapon)?.name : 'なし';
+        const aName = s.armor && typeof Items !== 'undefined' ? Items.getArmor(s.armor)?.name || Items.getAnyItem(s.armor)?.name : 'なし';
+        
+        detail.innerHTML = `
+          <div style="margin-bottom:15px; color:var(--accent-yellow); border-bottom:1px solid #fff;">【ステータス詳細】</div>
+          <div style="display:flex; flex-wrap:wrap; gap:20px;">
+            <div style="flex:1; min-width:120px;">
+              <div>LV: ${s.level}</div>
+              <div>HP: ${s.hp} / ${s.maxHp}</div>
+              <div>ATK: ${Player.getAttack()}</div>
+              <div>DEF: ${Player.getDefense()}</div>
+              <div>EXP: ${s.exp} / ${s.level * 10}</div>
+            </div>
+            <div style="flex:1; min-width:140px;">
+              <div>武器: ${wName}</div>
+              <div>防具: ${aName}</div>
+              <div>GOLD: ${s.gold} G</div>
+            </div>
+          </div>
+          <div style="margin-top:15px; color:var(--text-secondary); font-size:0.85em;">現在地: ${map ? map.name : '不明'}</div>
+        `;
+
+      } else if (menuMode === 'items' || menuMode === 'item_action') {
+        let html = '<div style="margin-bottom:10px; color:var(--accent-yellow); border-bottom:1px solid #fff;">【もちもの】</div>';
+        
+        let descText = "";
+        let actionBox = "";
+
+        s.inventory.forEach((inv, i) => {
+          let itemDef = typeof Items !== 'undefined' ? Items.getAnyItem(inv.id) : null;
+          let name = itemDef ? itemDef.name : '???';
+          let isEquipped = (s.weapon === inv.id || s.armor === inv.id);
+          let eqMark = isEquipped ? '<span style="color:#ffcc33; font-weight:bold;">[E]</span> ' : '';
+          
+          let cur = (i === itemSelectedIndex) ? '<span style="color:var(--accent-yellow);">▶ </span>' : '<span style="opacity:0;">▶ </span>';
+          let rowColor = (i === itemSelectedIndex) ? '#fff' : 'var(--text-secondary)';
+          
+          html += `<div style="color:${rowColor}; margin: 2px 0;">${cur}${eqMark}${name} <span style="font-size:0.85em;">x${inv.count}</span></div>`;
+
+          if (i === itemSelectedIndex && itemDef) {
+            descText = itemDef.desc || '';
+            
+            if (menuMode === 'item_action') {
+              let actName = '使う';
+              if (itemDef.attack !== undefined || itemDef.defense !== undefined || itemDef.type === 'weapon' || itemDef.type === 'armor') actName = '装備する';
+              else if (itemDef.type === 'key') actName = 'やめる'; 
+              
+              let curAct0 = itemActionIndex === 0 ? '▶' : '&nbsp;';
+              let curAct1 = itemActionIndex === 1 ? '▶' : '&nbsp;';
+              
+              actionBox = `
+                <div style="margin-top: 15px; padding: 10px; border: 2px solid var(--accent-yellow); background: var(--bg-primary); border-radius:4px; max-width: 150px;">
+                  <div style="${itemActionIndex===0?'color:#fff;':'color:gray;'}">${curAct0} ${actName}</div>
+                  <div style="${itemActionIndex===1?'color:#fff;':'color:gray;'}">${curAct1} やめる</div>
+                </div>
+              `;
+            }
+          }
+        });
+
+        html += `<div style="margin-top:15px; font-size:0.85em; color:#33ff88; padding-top:10px; border-top: 1px dotted rgba(255,255,255,0.2);">${descText}</div>`;
+        html += actionBox;
+        
+        detail.innerHTML = html;
+      }
+    },
+
+    setMenuIndex(index) {
+      if (menuOpen) {
+        menuMode = 'base';
+        menuSelectedIndex = index;
+        this.updateMenuSelection();
+        this.updateMenuDetail();
+        Input.triggerConfirm();
+      }
+    }
+  };
+})();
+
+// メニューオプションのクリック対応
+document.querySelectorAll('.menu-option').forEach((opt, i) => {
+  opt.addEventListener('click', () => {
+    UI.setMenuIndex(i);
+  });
+});
+
+</script>
+  <script>
+// ===== save.js - セーブ/ロード =====
+const Save = (() => {
+  const SAVE_KEY = 'overtale_save';
+
+  return {
+    /** セーブ */
+    save() {
+      const data = {
+        player: Player.exportData(),
+        timestamp: Date.now(),
+        version: 1,
+      };
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        return true;
+      } catch (e) {
+        console.error('セーブ失敗:', e);
+        return false;
+      }
+    },
+
+    /** ロード */
+    load() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data || !data.player) return false;
+        Player.importData(data.player);
+        return true;
+      } catch (e) {
+        console.error('ロード失敗:', e);
+        return false;
+      }
+    },
+
+    /** セーブデータ存在確認 */
+    hasSave() {
+      return !!localStorage.getItem(SAVE_KEY);
+    },
+
+    /** セーブ削除 */
+    deleteSave() {
+      localStorage.removeItem(SAVE_KEY);
+    },
+  };
+})();
+
+</script>
+  <script>
+// ===== event.js - イベント・テキスト演出システム =====
+const GameEvent = (() => {
+  let active = false;
+  let mode = 'none'; // none, textscene, choice, boss_event
+  let callback = null;
+
+  // テキストシーン
+  let sceneLines = [];
+  let sceneLineIndex = 0;
+  let sceneCharIndex = 0;
+  let sceneTimer = 0;
+  const TEXT_SPEED = 2;      // フレームごとに1文字
+  const LINE_DELAY = 40;     // 行切り替え待機(フレーム)
+  let lineWaiting = false;
+  let lineWaitTimer = 0;
+
+  // 選択肢
+  let choices = [];
+  let choiceSelectedIndex = 0;
+  let choiceCallback = null;
+
+  // イベント一時変数
+  let tempCanPeace = false;
+  let currentBossEventId = null; // 'boss1', 'boss2', 'final'
+
+  // ========== テキストシーン ==========
+  
+  function startTextScene(lines, onComplete) {
+    active = true;
+    mode = 'textscene';
+    sceneLines = lines;
+    sceneLineIndex = 0;
+    sceneCharIndex = 0;
+    sceneTimer = 0;
+    lineWaiting = false;
+    lineWaitTimer = 0;
+    callback = onComplete || null;
+
+    const overlay = document.getElementById('text-scene-overlay');
+    const line = document.getElementById('text-scene-line');
+    if (overlay) {
+      overlay.classList.add('active');
+      // タップで進行
+      if (!overlay.dataset.listenerAdded) {
+        const handleInteraction = (e) => {
+          if (active && mode === 'textscene') {
+            e.preventDefault();
+            Input.triggerConfirm();
+          }
+        };
+        overlay.addEventListener('click', handleInteraction);
+        overlay.addEventListener('touchstart', handleInteraction, { passive: false });
+        overlay.dataset.listenerAdded = 'true';
+      }
+    }
+    if (line) line.textContent = '';
+  }
+
+  function updateTextScene() {
+    if (mode !== 'textscene') return;
+    if (sceneLineIndex >= sceneLines.length) {
+      endTextScene();
+      return;
+    }
+
+    const currentLine = sceneLines[sceneLineIndex];
+
+    // 空行はそのまま次へ
+    if (currentLine === '') {
+      lineWaiting = true;
+      lineWaitTimer = LINE_DELAY / 2;
+    }
+
+    // 行切り替え待機中
+    if (lineWaiting) {
+      lineWaitTimer--;
+      // スキップ
+      if (Input.isJustPressed('confirm')) {
+        lineWaiting = false;
+        lineWaitTimer = 0;
+        sceneLineIndex++;
+        sceneCharIndex = 0;
+        sceneTimer = 0;
+        return;
+      }
+      if (lineWaitTimer <= 0) {
+        lineWaiting = false;
+        sceneLineIndex++;
+        sceneCharIndex = 0;
+        sceneTimer = 0;
+      }
+      return;
+    }
+
+    // 文字送り
+    sceneTimer++;
+    if (sceneCharIndex < currentLine.length) {
+      if (sceneTimer % TEXT_SPEED === 0) {
+        sceneCharIndex++;
+      }
+      // Enter/Zで即表示
+      if (Input.isJustPressed('confirm')) {
+        sceneCharIndex = currentLine.length;
+      }
+    } else {
+      // 全文表示済み → 次の行へ
+      if (Input.isJustPressed('confirm')) {
+        lineWaiting = true;
+        lineWaitTimer = 10;
+      }
+    }
+
+    // 表示更新
+    const lineEl = document.getElementById('text-scene-line');
+    if (lineEl) {
+      lineEl.textContent = currentLine.substring(0, sceneCharIndex);
+    }
+  }
+
+  function endTextScene() {
+    const overlay = document.getElementById('text-scene-overlay');
+    if (overlay) overlay.classList.remove('active');
+    active = false;
+    mode = 'none';
+    const cb = callback;
+    callback = null;
+    if (cb) cb();
+  }
+
+  // ========== 選択肢 ==========
+  
+  function showChoice(choiceList, onSelect) {
+    active = true;
+    mode = 'choice';
+    choices = choiceList;
+    choiceSelectedIndex = 0;
+    choiceCallback = onSelect;
+
+    const container = document.getElementById('event-choice-container');
+    if (container) {
+      container.innerHTML = '';
+      container.classList.add('active');
+      choices.forEach((text, i) => {
+        const el = document.createElement('div');
+        el.className = 'event-choice-option' + (i === 0 ? ' selected' : '');
+        el.textContent = text;
+        el.dataset.index = i;
+        
+        // マウス・タップ対応
+        el.addEventListener('click', () => {
+          if (mode === 'choice') {
+            choiceSelectedIndex = i;
+            updateChoiceUI();
+            setTimeout(() => Input.triggerConfirm(), 50);
+          }
+        });
+
+        container.appendChild(el);
+      });
+    }
+  }
+
+  function updateChoice() {
+    if (mode !== 'choice') return;
+
+    if (Input.isJustPressed('up')) {
+      choiceSelectedIndex = Math.max(0, choiceSelectedIndex - 1);
+      updateChoiceUI();
+    }
+    if (Input.isJustPressed('down')) {
+      choiceSelectedIndex = Math.min(choices.length - 1, choiceSelectedIndex + 1);
+      updateChoiceUI();
+    }
+    if (Input.isJustPressed('confirm')) {
+      const container = document.getElementById('event-choice-container');
+      if (container) container.classList.remove('active');
+      active = false;
+      mode = 'none';
+      const cb = choiceCallback;
+      choiceCallback = null;
+      if (cb) cb(choiceSelectedIndex, choices[choiceSelectedIndex]);
+    }
+  }
+
+  function updateChoiceUI() {
+    const options = document.querySelectorAll('.event-choice-option');
+    options.forEach((opt, i) => {
+      opt.classList.toggle('selected', i === choiceSelectedIndex);
+    });
+  }
+
+  // ========== オープニング ==========
+
+  const openingLines = [
+    'この世界では、国民の8割が花粉症に苦しんでいる。',
+    '目のかゆみ、止まらないくしゃみ、終わらない鼻水。',
+    'それはもはや"災害"と呼べるものだった。',
+    '主人公もまた、重度の花粉症に悩まされていた。',
+    '日常生活すらままならないほどの症状。',
+    'その原因は、異常に増殖した杉の木。',
+    'そして、その中心に存在する『杉の巨木』。',
+    'すべての元凶を断つため——',
+    '主人公は、旅に出る。',
+    '花粉を巡る戦いが、今始まる。',
+  ];
+
+  // ========== エンディング ==========
+
+  const endingCoexistLines = [
+    '杉の巨木との戦いは終わった。',
+    '戦いの果てに、主人公は杉と対話し——',
+    '互いに理解し合うことができた。',
+    '杉は、人間に危害を加えないことを約束した。',
+    'それにより、花粉の被害は大きく減少し、',
+    '多くの人々が救われることとなった。',
+    '自然と人間は、共に生きる道を選んだのだ。',
+    '——これから先の未来が、',
+    'より良いものであることを願って。',
+  ];
+
+  const endingDestroyLines = [
+    '杉の巨木は、討伐された。',
+    'その結果、花粉は消え去り、',
+    '全国の花粉症患者は救われた。',
+    'しかし——',
+    '森林は大きく失われ、',
+    '地球環境に深刻な影響が現れ始めた。',
+    '地球温暖化の加速、災害の増加、',
+    '崩れていく自然のバランス。',
+    '人間は、新たな問題を生み出してしまったのだ。',
+    'もっと良い他の選択肢があったのではないだろうか……。',
+  ];
+
+  // ========== ボス1イベント（第2の街） ==========
+
+  function startBoss1Event() {
+    if (Player.state.flags.boss1Cleared) return;
+    currentBossEventId = 'boss1';
+
+    // イベントテキスト表示
+    startTextScene([
+      '森林破壊をする人間の方が悪い！',
+      '杉を倒すなんて許さない！',
+    ], () => {
+      // 選択肢表示
+      showChoice(['話を聞く', '反論する', '無視する'], (index, text) => {
+        if (text === '話を聞く') {
+          tempCanPeace = true;
+        } else {
+          tempCanPeace = false;
+        }
+        // ボス戦開始
+        Battle.start('boss_guardian', { id: 'boss1', type: 'boss_guardian' });
+        Main.switchScreen('battle');
+      });
+    });
+  }
+
+  // ========== ボス2イベント（白樺） ==========
+
+  function startBoss2Event() {
+    if (!Player.state.flags.boss1Cleared || Player.state.flags.boss2Cleared) return;
+    currentBossEventId = 'boss2';
+
+    startTextScene([
+      '杉を倒させるわけにはいかない！',
+      '森は守られるべきだ！',
+    ], () => {
+      // 和解可能条件
+      if (Player.state.flags.routePoint >= 1 && Player.state.flags.noKill) {
+        tempCanPeace = true;
+      } else {
+        tempCanPeace = false;
+      }
+      // ボス戦開始
+      Battle.start('boss_birch', { id: 'boss2', type: 'boss_birch' });
+      Main.switchScreen('battle');
+    });
+  }
+
+  // ========== ラスボス前判定 ==========
+
+  function checkFinalRoute() {
+    const f = Player.state.flags;
+    if (f.routePoint === 2 && f.noKill) {
+      f.finalUnlocked = true;
+    } else {
+      f.finalUnlocked = false;
+    }
+  }
+
+  // ========== ラスボスイベント ==========
+
+  function startFinalBossEvent() {
+    currentBossEventId = 'final';
+    checkFinalRoute();
+
+    if (Player.state.flags.finalUnlocked) {
+      tempCanPeace = true;
+    } else {
+      tempCanPeace = false;
+    }
+
+    Battle.start('boss_cedar', { id: 'boss', type: 'boss_cedar' });
+    Main.switchScreen('battle');
+  }
+
+  // ========== ボス戦終了処理 ==========
+
+  function onBossBattleEnd(result) {
+    // result: 'kill' or 'peace'
+    const flags = Player.state.flags;
+
+    if (currentBossEventId === 'boss1') {
+      if (result === 'peace' && tempCanPeace) {
+        flags.routePoint += 1;
+      }
+      if (result === 'kill') {
+        flags.noKill = false;
+      }
+      flags.boss1Cleared = true;
+    } else if (currentBossEventId === 'boss2') {
+      if (result === 'peace' && tempCanPeace) {
+        flags.routePoint += 1;
+      }
+      if (result === 'kill') {
+        flags.noKill = false;
+      }
+      flags.boss2Cleared = true;
+    } else if (currentBossEventId === 'final') {
+      if (result === 'peace' && tempCanPeace) {
+        // 共存エンド
+        playEndingCoexist();
+        return;
+      }
+      if (result === 'kill') {
+        flags.noKill = false;
+        // 殲滅エンド
+        playEndingDestroy();
+        return;
+      }
+    }
+
+    currentBossEventId = null;
+    tempCanPeace = false;
+  }
+
+  // ========== エンディング再生 ==========
+
+  function playEndingCoexist() {
+    currentBossEventId = null;
+    tempCanPeace = false;
+    startTextScene(endingCoexistLines, () => {
+      UI.showNotification('~~ 共存エンド ~~', 5000);
+      Main.switchScreen('title');
+    });
+  }
+
+  function playEndingDestroy() {
+    currentBossEventId = null;
+    tempCanPeace = false;
+    startTextScene(endingDestroyLines, () => {
+      UI.showNotification('~~ 殲滅エンド ~~', 5000);
+      Main.switchScreen('title');
+    });
+  }
+
+  // ========== 公開API ==========
+  return {
+    isActive() { return active; },
+    getMode() { return mode; },
+    getTempCanPeace() { return tempCanPeace; },
+    getCurrentBossEventId() { return currentBossEventId; },
+
+    // テキストシーン
+    startTextScene,
+
+    // 選択肢
+    showChoice,
+
+    // オープニング
+    playOpening(onComplete) {
+      startTextScene(openingLines, onComplete);
+    },
+
+    // エンディング
+    playEndingCoexist,
+    playEndingDestroy,
+
+    // ボスイベント
+    startBoss1Event,
+    startBoss2Event,
+    startFinalBossEvent,
+    checkFinalRoute,
+
+    // ボス戦終了処理
+    onBossBattleEnd,
+
+    // 更新
+    update() {
+      if (!active) return;
+      switch (mode) {
+        case 'textscene':
+          updateTextScene();
+          break;
+        case 'choice':
+          updateChoice();
+          break;
+      }
+    },
+
+    // Canvas描画（ゲームループからの呼び出し用）
+    draw(ctx, canvasW, canvasH) {
+      if (!active) return;
+      if (mode === 'textscene') {
+        // テキストシーンはHTML overlayで描画するため、ここでは背景のみ
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvasW, canvasH);
+      }
+    },
+  };
+})();
+
+</script>
+  <script>
+// ===== main.js - ゲームループ・画面管理 =====
+const Main = (() => {
+  let currentScreen = 'title';
+  let titleSelectedIndex = 0;
+  const TITLE_OPTIONS = ['start', 'continue'];
+  let canvas, ctx;
+  let canvasW = 640, canvasH = 448;
+  let encounterCooldown = 0;
+  let savePointMsgShown = false;
+
+  // NPC会話状態
+  let talkingNPC = null;
+  let dialogueIndex = 0;
+  let dialogueCharIndex = 0;
+  let dialogueTimer = 0;
+
+  /** 初期化 */
+  function init() {
+    canvas = document.getElementById('game-canvas');
+    ctx = canvas.getContext('2d');
+    resizeCanvas();
+    createTitleParticles();
+
+    // つづきからボタンの有効/無効
+    const continueOpt = document.querySelector('[data-action="continue"]');
+    if (continueOpt) {
+      continueOpt.style.opacity = Save.hasSave() ? '1' : '0.3';
+    }
+
+    // タイトルオプションのクリック対応
+    document.querySelectorAll('.title-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const action = opt.dataset.action;
+        if (action === 'start') startNewGame();
+        else if (action === 'continue' && Save.hasSave()) loadGame();
+      });
+    });
+
+    // リサイズ対応
+    window.addEventListener('resize', resizeCanvas);
+
+    // キャンバス・画面クリックで会話進行
+    const handleGlobalInteraction = (e) => {
+      if (talkingNPC || currentScreen === 'event' || currentScreen === 'title') {
+        // e.preventDefault(); // タイトルオプションのクリックを阻害しないよう注意
+        Input.triggerConfirm();
+      }
+    };
+    canvas.addEventListener('click', handleGlobalInteraction);
+    canvas.addEventListener('touchstart', handleGlobalInteraction, { passive: true });
+    
+    // タイトル画面全体でもタップ可能に
+    const titleScreen = document.getElementById('title-screen');
+    if (titleScreen) {
+      titleScreen.addEventListener('touchstart', (e) => {
+        if (currentScreen === 'title') {
+          Input.triggerConfirm();
+        }
+      }, { passive: true });
+    }
+
+    // ゲームループ開始
+    requestAnimationFrame(gameLoop);
+  }
+
+  /** キャンバスリサイズ */
+  function resizeCanvas() {
+    if (!canvas) return;
+    
+    // ステータスバーの高さを考慮する
+    const statusBar = document.getElementById('status-bar');
+    const statusH = (statusBar && statusBar.offsetHeight) ? statusBar.offsetHeight : 45;
+    
+    let maxW = window.innerWidth - 20;
+    let maxH = window.innerHeight - statusH - 20;
+
+    const ratio = 16 / 9;
+
+    let displayW, displayH;
+    if (maxW / maxH > ratio) {
+      displayH = maxH;
+      displayW = Math.floor(maxH * ratio);
+    } else {
+      displayW = maxW;
+      displayH = Math.floor(maxW / ratio);
+    }
+
+    // 内部解像度 (16:9の広い視野角)
+    canvasW = 800;
+    canvasH = 450;
+    
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    
+    // ブラウザ表示サイズを動的に変更
+    canvas.style.width = displayW + 'px';
+    canvas.style.height = displayH + 'px';
+
+    if (statusBar) {
+      statusBar.style.width = displayW + 'px';
+      statusBar.style.minWidth = 'auto'; // 動的リサイズを許可
+    }
+  }
+
+  /** タイトルパーティクル生成 */
+  function createTitleParticles() {
+    const container = document.getElementById('title-particles');
+    if (!container) return;
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.classList.add('particle');
+      p.style.left = Math.random() * 100 + '%';
+      p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+      p.style.animationDelay = (Math.random() * 6) + 's';
+      p.style.animationDuration = (4 + Math.random() * 4) + 's';
+      const colors = ['#ffcc33', '#ff3355', '#33ff88', '#aa55ff', '#3388ff'];
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      container.appendChild(p);
+    }
+  }
+
+  /** 新規ゲーム開始 */
+  function startNewGame() {
+    Player.init();
+    GameMap.init();
+    UI.updateStatus();
+    // オープニング再生
+    currentScreen = 'event';
+    document.querySelectorAll('.screen:not(.overlay)').forEach(s => s.classList.remove('active'));
+    document.getElementById('game-screen').classList.add('active');
+    GameEvent.playOpening(() => {
+      switchScreen('game');
+    });
+  }
+
+  /** ロードゲーム */
+  function loadGame() {
+    if (Save.load()) {
+      GameMap.init();
+      UI.updateStatus();
+      switchScreen('game');
+    }
+  }
+
+  /** 画面切り替え */
+  function switchScreen(screen) {
+    document.querySelectorAll('.screen:not(.overlay)').forEach(s => s.classList.remove('active'));
+    currentScreen = screen;
+    switch (screen) {
+      case 'title':
+        document.getElementById('title-screen').classList.add('active');
+        break;
+      case 'game':
+        document.getElementById('game-screen').classList.add('active');
+        break;
+      case 'battle':
+        document.getElementById('battle-screen').classList.add('active');
+        break;
+    }
+  }
+
+  /** タイトル画面更新 */
+  function updateTitle() {
+    if (Input.isJustPressed('up') || Input.isJustPressed('down')) {
+      titleSelectedIndex = titleSelectedIndex === 0 ? 1 : 0;
+      document.querySelectorAll('.title-option').forEach((opt, i) => {
+        opt.classList.toggle('selected', i === titleSelectedIndex);
+      });
+    }
+
+    if (Input.isJustPressed('confirm')) {
+      if (titleSelectedIndex === 0) {
+        startNewGame();
+      } else if (Save.hasSave()) {
+        loadGame();
+      }
+    }
+  }
+
+  /** NPC会話開始 */
+  function startDialogue(npc) {
+    talkingNPC = npc;
+    dialogueIndex = 0;
+    dialogueCharIndex = 0;
+    dialogueTimer = 0;
+  }
+
+  /** NPC会話更新 */
+  function updateDialogue() {
+    if (!talkingNPC) return false;
+
+    const text = talkingNPC.dialogue[dialogueIndex];
+    if (!text) { talkingNPC = null; return false; }
+
+    dialogueTimer++;
+    if (dialogueCharIndex < text.length) {
+      if (dialogueTimer % 2 === 0) dialogueCharIndex++;
+    }
+
+    // テキストスキップ
+    if (Input.isJustPressed('confirm') && dialogueCharIndex < text.length) {
+      dialogueCharIndex = text.length;
+    } else if (Input.isJustPressed('confirm') && dialogueCharIndex >= text.length) {
+      dialogueIndex++;
+      dialogueCharIndex = 0;
+      dialogueTimer = 0;
+      if (dialogueIndex >= talkingNPC.dialogue.length) {
+        // オブジェクト毎のカスタムイベント処理 (調べるイベント)
+        if (talkingNPC.isObject && talkingNPC.inspectEvent) {
+          const ev = talkingNPC.inspectEvent;
+          const flags = Player.state.flags;
+          
+          if (ev === 'ruins_sign') {
+            flags.readSign = true;
+          }
+          else if (ev === 'ruins_loot') {
+            if (flags.lootedShops < 3) {
+              flags.lootedShops++;
+              Player.addItem('potion', 1); // 汎用回復アイテム(仮)または他の有用なアイテム
+              UI.showNotification('傷薬を見つけた！', 2000);
+            } else {
+              UI.showNotification('もう何も残っていない…', 2000);
+            }
+          }
+          else if (ev === 'ruins_door') {
+            if (flags.powerOn) {
+              UI.showNotification('扉のロックが解除された！', 2000);
+              // ここで中に入れるようにする (warpsの判定は既にmap.js側で行う)
+            }
+          }
+          else if (ev === 'ruins_merchant') {
+            // ショップイベント
+          }
+          else if (ev === 'ruins_generator') {
+            if (!flags.powerOn) {
+              flags.powerOn = true;
+              UI.showNotification('非常用電源が回復した！', 2000);
+            }
+          }
+          else if (ev === 'ruins_memorial') {
+            flags.memorialSeen = true;
+          }
+          else if (ev === 'ruins_hospital') {
+            flags.learnedForestTruth = true;
+          }
+          else if (ev === 'ruins_school') {
+            flags.readDiaryCount++;
+          }
+          else if (ev === 'ruins_basement') {
+            flags.learnedCoexistenceHint = true;
+          }
+        }
+        
+        // 通常の会話フラグ設定
+        if (talkingNPC.flagSet && Player.state.flags) {
+          Object.assign(Player.state.flags, talkingNPC.flagSet);
+        }
+        
+        // サバイバー選択肢イベント
+        if (talkingNPC.isSurvivorEvent && typeof GameEvent !== 'undefined') {
+          const originalNpc = talkingNPC; // タイマーリセット等で消える前に保持
+          talkingNPC = null;
+          GameEvent.showChoice(['話を聞く', '急いでいる', '杉は全部倒すべきだ'], (index, text) => {
+            if (text === '話を聞く') {
+              Player.state.flags.routePoint += 1;
+              Player.state.flags.listenedSurvivor = true;
+              
+              GameEvent.startTextScene([
+                '……そうか、ちゃんと話を聞いてくれるのか',
+                '確かに、杉は原因の一つだと思う',
+                'でもな……\n昔は、こんなことなかったんだ',
+                '森はもっと静かで、\n人間とちゃんと距離を保ってた',
+                'それを壊したのは、俺たちかもしれない',
+                '木を切って、土地を広げて、\n都合よく自然を使ってきた',
+                'その結果が、これだとしたら……',
+                '全部を壊すだけで、本当に終わるのか？',
+                '（少しの沈黙）',
+                '……あんたがどうするかは、あんたが決めることだ',
+                'でも、もし戦うなら――\n“何のために戦うのか”だけは、忘れるな'
+              ], () => {
+                Player.addItem('old_mask', 1);
+                UI.showNotification('古い防護マスクを手に入れた！', 3000);
+                originalNpc.isSurvivorEvent = false;
+                originalNpc.dialogue = ['“何のために戦うのか”だけは、忘れるな。'];
+                Main.switchScreen('game');
+              });
+              
+            } else if (text === '急いでいる') {
+              GameEvent.startTextScene([
+                '……そうか',
+                'ここに長くいるべき場所じゃないのは、確かだな',
+                '気をつけて進めよ',
+                '外は……まだ、終わってない'
+              ], () => {
+                originalNpc.isSurvivorEvent = false;
+                originalNpc.dialogue = ['ここはもうほとんど終わった町だ。\n気をつけて進めよ。'];
+                Main.switchScreen('game');
+              });
+
+            } else if (text === '杉は全部倒すべきだ') {
+              Player.state.flags.antiTreeChoice = true;
+              GameEvent.startTextScene([
+                '……そう言うと思ったよ',
+                'ここまで見れば、そう思うのも無理はない',
+                '実際、俺も何度も思った\n「全部なくなればいい」ってな',
+                '（少し間）',
+                'でもな……\n全部なくした後に、何が残るんだろうな',
+                'ここみたいに、\n何も残らない場所が増えるだけかもしれない',
+                '……まあいい\nあんたの決めた道だ',
+                '最後まで、やりきれよ'
+              ], () => {
+                originalNpc.isSurvivorEvent = false;
+                originalNpc.dialogue = ['あんたの決めた道だ。\n最後まで、やりきれよ。'];
+                Main.switchScreen('game');
+              });
+            }
+          });
+          // 画面全体を隠さずに、イベント制御に切り替える
+          currentScreen = 'event';
+          return false;
+        }
+
+        // ショップNPCならショップを開く
+        if (talkingNPC.isShop && typeof Items !== 'undefined') {
+          Items.openShop(talkingNPC.shopId);
+        }
+        talkingNPC = null;
+        return false;
+      }
+    }
+
+    if (Input.isJustPressed('cancel')) {
+      talkingNPC = null;
+      return false;
+    }
+
+    return true;
+  }
+
+  /** NPC会話描画 */
+  function drawDialogue() {
+    if (!talkingNPC) return;
+    const text = talkingNPC.dialogue[dialogueIndex];
+    if (!text) return;
+
+    const displayText = text.substring(0, dialogueCharIndex);
+
+    // 会話ボックス
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    const boxX = 20, boxY = canvasH - 100, boxW = canvasW - 40, boxH = 80;
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+    // NPC名
+    ctx.fillStyle = '#ffcc33';
+    ctx.font = '14px "DotGothic16", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(talkingNPC.name, boxX + 10, boxY + 18);
+
+    // テキスト
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '13px "DotGothic16", monospace';
+    const lines = displayText.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], boxX + 10, boxY + 38 + i * 18);
+    }
+
+    // 進行マーク
+    if (dialogueCharIndex >= text.length) {
+      ctx.fillStyle = '#ffcc33';
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+      ctx.fillText('▼', boxX + boxW - 24, boxY + boxH - 10);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /** マップ画面更新 */
+  function updateGame() {
+    // メニュー処理
+    if (UI.isMenuOpen()) {
+      UI.updateMenu();
+      return;
+    }
+
+    // ショップUI処理
+    if (typeof Items !== 'undefined' && Items.isShopUIOpen()) {
+      Items.handleShopInput();
+      return;
+    }
+
+    if (Input.isJustPressed('menu')) {
+      UI.toggleMenu();
+      return;
+    }
+
+    // NPC会話中
+    if (talkingNPC) {
+      updateDialogue();
+      // 描画
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, canvasW, canvasH);
+      GameMap.draw(ctx, canvasW, canvasH);
+      drawDialogue();
+      UI.updateStatus();
+      return;
+    }
+
+    // プレイヤー移動
+    GameMap.updatePlayerMovement();
+
+    // ゾーン更新
+    GameMap.updateZone();
+
+    // NPC接触 → Zキーで会話
+    if (Input.isJustPressed('confirm')) {
+      const npc = GameMap.checkNPCContact();
+      if (npc) {
+        startDialogue(npc);
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, canvasW, canvasH);
+        GameMap.draw(ctx, canvasW, canvasH);
+        drawDialogue();
+        UI.updateStatus();
+        return;
+      }
+    }
+
+    // ボス接触判定
+    if (encounterCooldown <= 0) {
+      const boss = GameMap.checkBossContact();
+      if (boss) {
+        encounterCooldown = 60;
+        if (typeof GameEvent !== 'undefined') {
+          if (boss.bossId === 'boss1') {
+            GameEvent.startBoss1Event();
+            currentScreen = 'event';
+          } else if (boss.bossId === 'boss2') {
+            GameEvent.startBoss2Event();
+            currentScreen = 'event';
+          } else if (boss.bossId === 'final') {
+            GameEvent.startFinalBossEvent();
+          }
+        } else {
+          Battle.start(boss.type, { id: boss.bossId || 'boss', type: boss.type });
+          switchScreen('battle');
+        }
+        return;
+      }
+    }
+
+    // ランダムエンカウント
+    if (encounterCooldown <= 0) {
+      const enemyType = GameMap.checkEncounter();
+      if (enemyType) {
+        encounterCooldown = 120;
+        Battle.start(enemyType, null);
+        switchScreen('battle');
+        return;
+      }
+    }
+
+    if (encounterCooldown > 0) encounterCooldown--;
+
+    // セーブポイント
+    if (GameMap.checkSavePoint()) {
+      if (!savePointMsgShown) {
+        savePointMsgShown = true;
+        UI.showNotification('セーブポイント - Zキーでセーブ', 2000);
+      }
+      if (Input.isJustPressed('confirm')) {
+        Player.heal(Player.state.maxHp); // 先に回復
+        Save.save();                     // その後にセーブ
+        UI.updateStatus();
+        UI.showNotification('セーブしました！ HPが全回復した！', 2000);
+      }
+    } else {
+      savePointMsgShown = false;
+    }
+
+    // マップ描画
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    GameMap.draw(ctx, canvasW, canvasH);
+
+    // 廃墟等の霧エフェクト
+    const zone = GameMap.getCurrentZone();
+    if (zone && zone.hazard === 'pollen_fog') {
+      ctx.fillStyle = 'rgba(200, 200, 50, 0.25)'; 
+      ctx.fillRect(0, 0, canvasW, canvasH);
+    }
+
+    // ステータス更新
+    UI.updateStatus();
+  }
+
+  /** ゲームループ */
+  function gameLoop() {
+    Input.update();
+
+    switch (currentScreen) {
+      case 'title':
+        updateTitle();
+        break;
+      case 'game':
+        updateGame();
+        break;
+      case 'battle':
+        Battle.update();
+        break;
+      case 'event':
+        if (typeof GameEvent !== 'undefined') {
+          GameEvent.update();
+          // イベントが終了して戦闘画面に切り替わっていない場合、ゲーム画面に戻る
+          if (!GameEvent.isActive() && currentScreen === 'event') {
+            switchScreen('game');
+          }
+        }
+        break;
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // DOM読み込み完了後に初期化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  return {
+    switchScreen,
+    getCurrentScreen() { return currentScreen; },
+  };
+})();
+
+</script>
+</body>
+</html>
